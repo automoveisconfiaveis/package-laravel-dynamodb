@@ -617,31 +617,51 @@ class Grammar extends BaseGrammar
      */
     public function compileUpdate(BaseBuilder $query, array $values)
     {
-        // Por enquanto, simples - será melhorado
         $key = $this->extractKeyFromWheres($query);
 
-        $updateExpression = [];
+        $setExpressions = [];
+        $removeExpressions = [];
+        $expressionAttributeNames = [];
         $expressionAttributeValues = [];
         $counter = 0;
 
         foreach ($values as $column => $value) {
             $counter++;
-            $valueKey = ":val{$counter}";
-            $updateExpression[] = "#attr{$counter} = {$valueKey}";
-            $expressionAttributeValues[$valueKey] = $value;
+            $nameKey = "#attr{$counter}";
+            $expressionAttributeNames[$nameKey] = $column;
+
+            if ($value === null) {
+                // DynamoDB não aceita NULL em atributo de chave de índice (GSI/LSI).
+                // Remover o atributo (o item sai do índice) em vez de SET = NULL.
+                $removeExpressions[] = $nameKey;
+            } else {
+                $valueKey = ":val{$counter}";
+                $setExpressions[] = "{$nameKey} = {$valueKey}";
+                $expressionAttributeValues[$valueKey] = $value;
+            }
+        }
+
+        $clauses = [];
+        if (! empty($setExpressions)) {
+            $clauses[] = 'SET ' . implode(', ', $setExpressions);
+        }
+        if (! empty($removeExpressions)) {
+            $clauses[] = 'REMOVE ' . implode(', ', $removeExpressions);
+        }
+
+        $params = [
+            'TableName' => $this->getTableName($query),
+            'Key' => $key,
+            'UpdateExpression' => implode(' ', $clauses),
+            'ExpressionAttributeNames' => $expressionAttributeNames,
+        ];
+
+        if (! empty($expressionAttributeValues)) {
+            $params['ExpressionAttributeValues'] = $expressionAttributeValues;
         }
 
         return [
-            'params' => [
-                'TableName' => $this->getTableName($query),
-                'Key' => $key,
-                'UpdateExpression' => 'SET ' . implode(', ', $updateExpression),
-                'ExpressionAttributeNames' => array_combine(
-                    array_map(fn($i) => "#attr{$i}", range(1, $counter)),
-                    array_keys($values)
-                ),
-                'ExpressionAttributeValues' => $expressionAttributeValues,
-            ],
+            'params' => $params,
         ];
     }
 

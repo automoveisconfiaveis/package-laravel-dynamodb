@@ -670,15 +670,22 @@ class DynamoDbConnection extends BaseConnection
     {
         $params = $compiled['params'] ?? $compiled;
 
-        $this->dynamoDbClient->updateItem([
+        $updateParams = [
             'TableName' => $params['TableName'] ?? $this->getConfig('table'),
             'Key' => $this->marshaler->marshalItem($params['Key']),
             'UpdateExpression' => $params['UpdateExpression'] ?? '',
-            'ExpressionAttributeValues' => isset($params['ExpressionAttributeValues'])
-                ? $this->marshaler->marshalItem($params['ExpressionAttributeValues'])
-                : [],
-            'ExpressionAttributeNames' => $params['ExpressionAttributeNames'] ?? [],
-        ]);
+        ];
+
+        // DynamoDB rejeita ExpressionAttributeNames/Values vazios; só enviar quando houver.
+        if (! empty($params['ExpressionAttributeNames'])) {
+            $updateParams['ExpressionAttributeNames'] = $params['ExpressionAttributeNames'];
+        }
+
+        if (! empty($params['ExpressionAttributeValues'])) {
+            $updateParams['ExpressionAttributeValues'] = $this->marshaler->marshalItem($params['ExpressionAttributeValues']);
+        }
+
+        $this->dynamoDbClient->updateItem($updateParams);
     }
 
     /**
