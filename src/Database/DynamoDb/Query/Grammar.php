@@ -589,12 +589,20 @@ class Grammar extends BaseGrammar
     {
         $table = $this->getTableName($query);
 
+        // DynamoDB não aceita NULL em atributo de chave de índice (GSI/LSI).
+        // Omitir atributos nulos do Item antes do PutItem (o item simplesmente
+        // não aparece nesses índices), evitando ValidationException.
+        $stripNulls = static fn (array $item): array => array_filter(
+            $item,
+            static fn ($value) => $value !== null
+        );
+
         // Se for array de arrays (batch insert), retorna todos
         if (isset($values[0]) && is_array($values[0])) {
-            return array_map(fn($value) => [
+            return array_map(fn ($value) => [
                 'params' => [
                     'TableName' => $table,
-                    'Item' => $value,
+                    'Item' => $stripNulls($value),
                 ],
             ], $values);
         }
@@ -603,7 +611,7 @@ class Grammar extends BaseGrammar
         return [
             'params' => [
                 'TableName' => $table,
-                'Item' => $values,
+                'Item' => $stripNulls($values),
             ],
         ];
     }
