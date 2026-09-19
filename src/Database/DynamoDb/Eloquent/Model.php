@@ -58,47 +58,18 @@ class Model extends BaseModel
      */
     protected $lsiIndexes = [];
 
-    protected $fieldNormalizers = [];
-
     /**
-     * Boot the model.
-     * Remove atributos null/vazios antes de salvar (DynamoDB não aceita null).
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saving(function ($model) {
-            $attributes = $model->getAttributes();
-            foreach ($attributes as $key => $value) {
-                if (is_null($value) || $value === '') {
-                    unset($model->$key);
-                }
-            }
-        });
-    }
-
-    /**
-     * Get the connection name for the model.
-     * Valida dinamicamente usando config('dynamodb.on_connection') ou config('database-dynamodb.on_connection').
+     * Resolve o nome da conexão do model.
+     *
+     * Se o model não definir $connection explicitamente, usa a conexão padrão
+     * do DynamoDB (config database-dynamodb.default => DYNAMODB_CONNECTION),
+     * evitando cair na conexão relacional padrão do Laravel.
      *
      * @return string|null
      */
     public function getConnectionName()
     {
-        // Se o modelo já tem uma conexão definida explicitamente, usar ela
-        if (isset($this->connection)) {
-            return $this->connection;
-        }
-
-        // Tentar usar on_connection do config (prioridade)
-        $onConnection = config('dynamodb.on_connection') ?? config('database-dynamodb.on_connection');
-        if ($onConnection) {
-            return $onConnection;
-        }
-
-        // Fallback para default do config
-        return config('dynamodb.default') ?? config('database-dynamodb.default', 'local');
+        return $this->connection ?? config('database-dynamodb.default', 'aws');
     }
 
     /**
@@ -123,18 +94,6 @@ class Model extends BaseModel
     }
 
     /**
-     * Create a new Eloquent query builder for the model.
-     * Override to use custom DynamoDb Eloquent Builder.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder|static
-     */
-    public function newEloquentBuilder($query)
-    {
-        return new \Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder($query);
-    }
-
-    /**
      * Perform a model insert operation.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
@@ -153,22 +112,6 @@ class Model extends BaseModel
         // Obter atributos
         $attributes = $this->getAttributes();
 
-        // Garantir que a partition key está presente
-        $partitionKey = $this->getPartitionKey();
-        if (empty($attributes[$partitionKey])) {
-            // Tentar obter do atributo diretamente (pode ter sido definido no evento creating)
-            $id = $this->getAttribute($partitionKey);
-            if (empty($id)) {
-                // Se ainda não tiver, gerar UUID
-                $id = \Illuminate\Support\Str::uuid()->toString();
-                $this->setAttribute($partitionKey, $id);
-            }
-            $attributes[$partitionKey] = $id;
-        }
-
-        // DynamoDB não aceita string vazia em chaves de índice (GSI/LSI); remover antes do PutItem
-        $attributes = $this->stripEmptyStringsFromIndexKeyAttributes($attributes);
-
         // Executar insert via connection
         $query->getConnection()->insert(
             $query->getQuery()->getGrammar()->compileInsert($query->getQuery(), $attributes)
@@ -178,48 +121,6 @@ class Model extends BaseModel
         $this->syncOriginal();
 
         return true;
-    }
-
-    /**
-     * Remove atributos de chave de índice (partition, sort, GSI, LSI) com string vazia ou null.
-     * DynamoDB não aceita string vazia em chaves de índice.
-     *
-     * @param array $attributes
-     * @return array
-     */
-    protected function stripEmptyStringsFromIndexKeyAttributes(array $attributes): array
-    {
-        $keyNames = [];
-        $partitionKey = $this->getPartitionKey();
-        if ($partitionKey) {
-            $keyNames[] = $partitionKey;
-        }
-        $sortKey = $this->getSortKey();
-        if ($sortKey) {
-            $keyNames[] = $sortKey;
-        }
-        foreach ($this->getGsiIndexes() as $indexConfig) {
-            if (!empty($indexConfig['partition_key'])) {
-                $keyNames[] = $indexConfig['partition_key'];
-            }
-            if (!empty($indexConfig['sort_key'])) {
-                $keyNames[] = $indexConfig['sort_key'];
-            }
-        }
-        foreach ($this->getLsiIndexes() as $indexConfig) {
-            if (!empty($indexConfig['sort_key'])) {
-                $keyNames[] = $indexConfig['sort_key'];
-            }
-        }
-        $keyNames = array_unique(array_filter($keyNames));
-
-        foreach ($keyNames as $key) {
-            if (array_key_exists($key, $attributes) && ($attributes[$key] === '' || $attributes[$key] === null)) {
-                unset($attributes[$key]);
-            }
-        }
-
-        return $attributes;
     }
 
     /**
@@ -240,18 +141,6 @@ class Model extends BaseModel
 
         // Obter atributos modificados
         $dirty = $this->getDirty();
-
-        // Remover a chave primária do array de dirty para evitar tentar atualizá-la
-        $partitionKey = $this->getPartitionKey();
-        if (isset($dirty[$partitionKey])) {
-            unset($dirty[$partitionKey]);
-        }
-
-        // Remover sort key se existir
-        $sortKey = $this->getSortKey();
-        if ($sortKey && isset($dirty[$sortKey])) {
-            unset($dirty[$sortKey]);
-        }
 
         if (count($dirty) === 0) {
             return false;
@@ -290,49 +179,6 @@ class Model extends BaseModel
         );
 
         return true;
-    }
-
-    /**
-     * Set the keys for a save update query.
-     * Sobrescreve o método padrão do Eloquent para garantir que o ID seja usado corretamente
-     * mesmo após fill() e garantir que uses getOriginal() para preservar o ID antes do fill().
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    protected function setKeysForSaveQuery($query)
-    {
-        $partitionKey = $this->getPartitionKey();
-        
-        // Prioridade: 1) getOriginal (preserva ID antes do fill), 2) getKey() atual, 3) getAttribute
-        // getOriginal() é importante porque preserva o valor antes do fill()
-        $keyValue = $this->getOriginal($partitionKey);
-        
-        if (empty($keyValue)) {
-            $keyValue = $this->getKey();
-        }
-        
-        if (empty($keyValue)) {
-            $keyValue = $this->getAttribute($partitionKey);
-        }
-        
-        if (empty($keyValue)) {
-            throw new \RuntimeException("Cannot update model without primary key value. Partition key: {$partitionKey}");
-        }
-        
-        $query->where($partitionKey, '=', $keyValue);
-        
-        // Se tiver sort key, adicionar também
-        $sortKey = $this->getSortKey();
-        if ($sortKey) {
-            // Prioridade: original primeiro, depois atributo atual
-            $sortKeyValue = $this->getOriginal($sortKey) ?? $this->getAttribute($sortKey);
-            if (!empty($sortKeyValue)) {
-                $query->where($sortKey, '=', $sortKeyValue);
-            }
-        }
-
-        return $query;
     }
 
     /**
@@ -376,16 +222,6 @@ class Model extends BaseModel
     }
 
     /**
-     * Get field normalizers configuration.
-     *
-     * @return array
-     */
-    public function getFieldNormalizers()
-    {
-        return $this->fieldNormalizers;
-    }
-
-    /**
      * Garantir que a tabela existe. Cria automaticamente se não existir.
      *
      * @return bool
@@ -413,10 +249,10 @@ class Model extends BaseModel
             // Tabela não existe, criar automaticamente
             try {
                 return $this->createTable();
-            } catch (\Exception $createException) {
+            } catch (\Exception $e) {
                 // Log erro mas não falhar (em produção, pode querer tratar diferente)
                 if (app()->bound('log')) {
-                    app('log')->warning("Failed to auto-create DynamoDB table {$tableName}: " . $createException->getMessage());
+                    app('log')->warning("Failed to auto-create DynamoDB table {$tableName}: " . $e->getMessage());
                 }
                 return false;
             }
@@ -684,3 +520,4 @@ class Model extends BaseModel
         return 'S';
     }
 }
+
