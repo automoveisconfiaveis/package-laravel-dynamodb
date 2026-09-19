@@ -78,12 +78,6 @@ class Grammar extends BaseGrammar
         ];
 
         switch ($operation) {
-            case 'BatchGetItem':
-                return [
-                    'operation' => 'BatchGetItem',
-                    'params' => $this->compileBatchGetItem($query, $params),
-                ];
-
             case 'GetItem':
                 return [
                     'operation' => 'GetItem',
@@ -115,15 +109,6 @@ class Grammar extends BaseGrammar
     {
         $wheres = $query->wheres;
 
-        // BatchGetItem: quando há apenas um whereIn na primary key
-        if (count($wheres) === 1 &&
-            $wheres[0]['type'] === 'In') {
-            $resolver = $this->getIndexResolver($query);
-            if ($resolver && $resolver->isPartitionKey($wheres[0]['column'])) {
-                return 'BatchGetItem';
-            }
-        }
-
         // GetItem: quando há apenas uma condição de igualdade na primary key
         if (count($wheres) === 1 &&
             $wheres[0]['type'] === 'Basic' &&
@@ -140,53 +125,18 @@ class Grammar extends BaseGrammar
         if ($resolver) {
             $indexMatch = $resolver->findBestIndex($query);
             if ($indexMatch) {
-                // Primary key simples sem sort key: usar GetItem só se não houver outras condições.
-                // Se houver (ex.: whereNull), usar Query para aplicar FilterExpression.
+                // Se encontrou índice, pode usar Query
                 if ($indexMatch['index_type'] === 'primary' &&
                     count($indexMatch['key_conditions']) === 1 &&
                     !$resolver->getSortKey()) {
-                    $keyColumns = array_column($indexMatch['key_conditions'], 'column');
-                    $remainingWheres = array_filter($wheres, function ($where) use ($keyColumns) {
-                        $col = $where['column'] ?? null;
-                        return $col === null || !in_array($col, $keyColumns);
-                    });
-                    if (empty($remainingWheres)) {
-                        return 'GetItem';
-                    }
+                    return 'GetItem'; // Primary key simples sem sort key
                 }
-                return 'Query'; // Usar Query com índice (e FilterExpression quando houver outras condições)
+                return 'Query'; // Usar Query com índice
             }
         }
 
         // Por último, usar Scan (menos eficiente)
         return 'Scan';
-    }
-
-    /**
-     * Compile BatchGetItem operation.
-     *
-     * @param BaseBuilder $query
-     * @param array $params
-     * @return array
-     */
-    protected function compileBatchGetItem(BaseBuilder $query, array $params)
-    {
-        $where = $query->wheres[0];
-        $key = $where['column'];
-        $values = $where['values'] ?? [];
-
-        // Preparar as chaves para BatchGetItem
-        // DynamoDB BatchGetItem tem limite de 100 itens por requisição
-        $keys = array_map(function ($value) use ($key) {
-            return [$key => $value];
-        }, $values);
-
-        $params['Keys'] = $keys;
-
-        // Adicionar ProjectionExpression se houver select específico
-        $this->addProjectionExpression($query, $params);
-
-        return $params;
     }
 
     /**
@@ -314,14 +264,35 @@ class Grammar extends BaseGrammar
             $this->addProjectionExpression($query, $params);
         }
 
+        // Ordenação: no DynamoDB a ordenação só acontece pela sort key do índice/tabela,
+        // controlada por ScanIndexForward (asc => true, desc => false). Traduz o orderBy.
+        if (! empty($query->orders)) {
+            $model = $this->getModelFromQuery($query);
+            $indexSortKey = null;
+            $indexType = $indexMatch['index_type'] ?? null;
+            $indexName = $indexMatch['index_name'] ?? null;
+
+            if ($indexType === 'gsi' && $indexName && $model) {
+                $indexSortKey = $model->getGsiIndexes()[$indexName]['sort_key'] ?? null;
+            } elseif ($indexType === 'lsi' && $indexName && $model) {
+                $indexSortKey = $model->getLsiIndexes()[$indexName]['sort_key'] ?? null;
+            } elseif ($indexType === 'primary') {
+                $indexSortKey = $resolver->getSortKey();
+            }
+
+            foreach ($query->orders as $order) {
+                $column = $order['column'] ?? null;
+                if ($indexSortKey === null || $column === $indexSortKey) {
+                    $params['ScanIndexForward'] = strtolower($order['direction'] ?? 'asc') !== 'desc';
+                    break;
+                }
+            }
+        }
+
         // Limit
         if ($query->limit !== null) {
             $params['Limit'] = $query->limit;
         }
-
-        // OrderBy: DynamoDB só permite ordenação pelo Sort Key do índice usado
-        // Usar ScanIndexForward (true = ascending, false = descending)
-        $this->compileOrderBy($query, $params, $indexMatch);
 
         return $params;
     }
@@ -548,37 +519,6 @@ class Grammar extends BaseGrammar
                     $attributeNames[$nameKey] = $column;
                     $attributeValues[$valueKey] = $value;
                     break;
-
-                case 'In':
-                    $column = $where['column'];
-                    $values = $where['values'] ?? [];
-                    if (empty($values)) {
-                        $counter--;
-                        break;
-                    }
-                    // DynamoDB FilterExpression não tem IN; usar (attr = :v1 OR attr = :v2 OR ...)
-                    $orParts = [];
-                    foreach ($values as $v) {
-                        $counter++;
-                        $valKey = ":val{$counter}";
-                        $orParts[] = "{$nameKey} = {$valKey}";
-                        $attributeValues[$valKey] = $v;
-                    }
-                    $attributeNames[$nameKey] = $column;
-                    $expression[] = '(' . implode(' OR ', $orParts) . ')';
-                    break;
-
-                case 'Null':
-                    $column = $where['column'];
-                    $attributeNames[$nameKey] = $column;
-                    $expression[] = "attribute_not_exists({$nameKey})";
-                    break;
-
-                case 'NotNull':
-                    $column = $where['column'];
-                    $attributeNames[$nameKey] = $column;
-                    $expression[] = "attribute_exists({$nameKey})";
-                    break;
             }
         }
 
@@ -720,44 +660,5 @@ class Grammar extends BaseGrammar
         }
         return $key;
     }
-
-    /**
-     * Compile orderBy clause for DynamoDB Query operations.
-     *
-     * No DynamoDB, orderBy só funciona para operações Query e apenas pelo Sort Key do índice usado.
-     * Usa ScanIndexForward: true = ascending, false = descending.
-     *
-     * @param BaseBuilder $query
-     * @param array $params
-     * @param array $indexMatch
-     * @return void
-     */
-    protected function compileOrderBy(BaseBuilder $query, array &$params, array $indexMatch): void
-    {
-        // Verificar se há orderBy no query
-        if (empty($query->orders)) {
-            return;
-        }
-
-        // Pegar o primeiro orderBy (DynamoDB só suporta ordenação por um campo - o Sort Key)
-        $orderBy = $query->orders[0];
-        $orderColumn = $orderBy['column'] ?? null;
-        $orderDirection = strtolower($orderBy['direction'] ?? 'asc');
-
-        if (!$orderColumn) {
-            return;
-        }
-
-        // Obter o Sort Key do índice sendo usado
-        $indexSortKey = $indexMatch['sort_key'] ?? null;
-
-        // Se o orderBy for pelo Sort Key do índice, usar ScanIndexForward
-        if ($indexSortKey && $orderColumn === $indexSortKey) {
-            // ScanIndexForward: true = ascending, false = descending
-            $params['ScanIndexForward'] = ($orderDirection === 'asc');
-        }
-        // Se não for pelo Sort Key, não podemos ordenar nativamente no DynamoDB
-        // A ordenação será feita em memória no Processor (se necessário)
-        // Por enquanto, apenas ignoramos (não adicionamos ScanIndexForward)
-    }
 }
+
