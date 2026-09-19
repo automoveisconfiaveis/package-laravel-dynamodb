@@ -519,6 +519,36 @@ class Grammar extends BaseGrammar
                     $attributeNames[$nameKey] = $column;
                     $attributeValues[$valueKey] = $value;
                     break;
+
+                case 'In':
+                    // whereIn: DynamoDB suporta "#attr IN (:v1, :v2, ...)" em FilterExpression
+                    $values = array_values($where['values'] ?? []);
+
+                    if (empty($values)) {
+                        // IN vazio nunca casa: mantém o comportamento do SQL (nenhum resultado)
+                        $expression[] = 'attribute_not_exists(' . $nameKey . ')';
+                        $attributeNames[$nameKey] = $where['column'];
+                        break;
+                    }
+
+                    $placeholders = [];
+                    foreach ($values as $i => $inValue) {
+                        $placeholder = "{$valueKey}_{$i}";
+                        $placeholders[] = $placeholder;
+                        $attributeValues[$placeholder] = $inValue;
+                    }
+
+                    $expression[] = "{$nameKey} IN (" . implode(', ', $placeholders) . ')';
+                    $attributeNames[$nameKey] = $where['column'];
+                    break;
+
+                case 'NotNull':
+                    // whereNotNull: no DynamoDB "nulo" pode ser atributo ausente
+                    // ou atributo gravado com o tipo NULL - os dois precisam ser excluidos
+                    $expression[] = "(attribute_exists({$nameKey}) AND {$nameKey} <> {$valueKey})";
+                    $attributeNames[$nameKey] = $where['column'];
+                    $attributeValues[$valueKey] = null;
+                    break;
             }
         }
 
