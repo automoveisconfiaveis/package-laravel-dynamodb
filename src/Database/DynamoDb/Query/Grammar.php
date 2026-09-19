@@ -691,4 +691,3 @@ class Grammar extends BaseGrammar
         return $key;
     }
 }
-
