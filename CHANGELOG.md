@@ -5,18 +5,7 @@ Todas as mudanças relevantes deste pacote são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [1.0.2] - 2026-09-22
-
-### Fixed
-- `PutItem` passa a remover do Item os campos vazios (`null` **ou** string vazia `''`),
-  alinhando o `compileInsert` ao contrato que o `compileUpdate` já seguia. Antes o insert
-  removia apenas `null`, e uma string vazia gravada em atributo que é chave de índice
-  (GSI/LSI) fazia o DynamoDB devolver `ValidationException` ("The AttributeValue for a key
-  attribute cannot contain an empty string value"). O atributo passa a simplesmente não ser
-  gravado — o item não aparece nesses índices (índice esparso). `0`, `'0'` e `false`
-  continuam preservados, em ambos os caminhos.
-
-## [1.0.0] - 2026-09-22
+## [Unreleased]
 
 ### Added
 - Hierarquia de exceções própria em `AutomoveisConfiaveis\LaravelDynamoDb\Exceptions`
@@ -50,6 +39,13 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `Model::find()` (e qualquer `where` com coluna qualificada `tabela.coluna`, como
   as geradas por `getQualifiedKeyName()`) agora resolve a partition key corretamente e
   usa `GetItem`, em vez de degradar para `Scan` e retornar vazio.
+- `PutItem` passa a remover do Item os campos vazios (`null` **ou** string vazia `''`),
+  alinhando o `compileInsert` ao contrato que o `compileUpdate` já seguia. Antes o insert
+  removia apenas `null`, e uma string vazia gravada em atributo que é chave de índice
+  (GSI/LSI) fazia o DynamoDB devolver `ValidationException` ("The AttributeValue for a key
+  attribute cannot contain an empty string value"). O atributo passa a simplesmente não ser
+  gravado — o item não aparece nesses índices (índice esparso). `0`, `'0'` e `false`
+  continuam preservados, em ambos os caminhos.
 
 ## [0.2.6] - 2026-09-22
 
@@ -75,8 +71,7 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Versão inicial: driver DynamoDB para Laravel com suporte a Eloquent, resolução automática
   de índices (GSI/LSI), `KeyConditionExpression`, paginação e DynamoDB Local.
 
-[1.0.2]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/compare/v1.0.1...v1.0.2
-[1.0.0]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/compare/v0.2.6...v1.0.0
+[Unreleased]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/compare/v0.2.6...HEAD
 [0.2.6]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/compare/v0.2.0...v0.2.6
 [0.2.0]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/automoveisconfiaveis/package-laravel-dynamodb/releases/tag/v0.1.0
