@@ -2,9 +2,12 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent;
 
-use Illuminate\Database\Eloquent\Model as BaseModel;
-use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Builder as DynamoDbBuilder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Builder as DynamoDbBuilder;
+use AutomoveisConfiaveis\LaravelDynamoDb\Exceptions\DynamoDbException;
+use AutomoveisConfiaveis\LaravelDynamoDb\Exceptions\MissingKeyException;
+use Illuminate\Database\Eloquent\Model as BaseModel;
+use Illuminate\Support\Str;
 
 class Model extends BaseModel
 {
@@ -102,7 +105,7 @@ class Model extends BaseModel
      * pagina por cursor (LastEvaluatedKey), que é o comportamento correto.
      *
      * @param  \Illuminate\Database\Query\Builder  $query
-     * @return \AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder
+     * @return Builder
      */
     public function newEloquentBuilder($query)
     {
@@ -112,7 +115,6 @@ class Model extends BaseModel
     /**
      * Perform a model insert operation.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
      * @return bool
      */
     protected function performInsert(\Illuminate\Database\Eloquent\Builder $query)
@@ -135,7 +137,7 @@ class Model extends BaseModel
         if (empty($attributes[$partitionKey])) {
             $id = $this->getAttribute($partitionKey);
             if (empty($id)) {
-                $id = \Illuminate\Support\Str::uuid()->toString();
+                $id = Str::uuid()->toString();
                 $this->setAttribute($partitionKey, $id);
             }
             $attributes[$partitionKey] = $id;
@@ -155,7 +157,6 @@ class Model extends BaseModel
     /**
      * Perform a model update operation.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
      * @return bool
      */
     protected function performUpdate(\Illuminate\Database\Eloquent\Builder $query)
@@ -207,7 +208,7 @@ class Model extends BaseModel
     /**
      * Perform a model delete operation.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return bool
      */
     protected function performDeleteOnModel()
@@ -242,7 +243,7 @@ class Model extends BaseModel
         $keyValue = $this->getOriginal($partitionKey) ?? $this->getAttribute($partitionKey);
 
         if ($keyValue === null || $keyValue === '') {
-            throw new \RuntimeException("Cannot save model without partition key value: {$partitionKey}");
+            throw new MissingKeyException("Cannot save model without partition key value: {$partitionKey}");
         }
 
         $query->where($partitionKey, '=', $keyValue);
@@ -300,18 +301,16 @@ class Model extends BaseModel
 
     /**
      * Garantir que a tabela existe. Cria automaticamente se não existir.
-     *
-     * @return bool
      */
     public function ensureTableExists(): bool
     {
-        if (!$this->autoCreateTable) {
+        if (! $this->autoCreateTable) {
             return true;
         }
 
         $connection = $this->getConnection();
 
-        if (!$connection instanceof DynamoDbConnection) {
+        if (! $connection instanceof DynamoDbConnection) {
             return false;
         }
 
@@ -321,6 +320,7 @@ class Model extends BaseModel
         // Verificar se tabela existe
         try {
             $client->describeTable(['TableName' => $tableName]);
+
             return true; // Tabela já existe
         } catch (\Exception $e) {
             // Tabela não existe, criar automaticamente
@@ -329,8 +329,9 @@ class Model extends BaseModel
             } catch (\Exception $e) {
                 // Log erro mas não falhar (em produção, pode querer tratar diferente)
                 if (app()->bound('log')) {
-                    app('log')->warning("Failed to auto-create DynamoDB table {$tableName}: " . $e->getMessage());
+                    app('log')->warning("Failed to auto-create DynamoDB table {$tableName}: ".$e->getMessage());
                 }
+
                 return false;
             }
         }
@@ -338,15 +339,13 @@ class Model extends BaseModel
 
     /**
      * Criar a tabela no DynamoDB automaticamente.
-     *
-     * @return bool
      */
     public function createTable(): bool
     {
         $connection = $this->getConnection();
 
-        if (!$connection instanceof DynamoDbConnection) {
-            throw new \RuntimeException('DynamoDB Model requires DynamoDbConnection');
+        if (! $connection instanceof DynamoDbConnection) {
+            throw new DynamoDbException('DynamoDB Model requires DynamoDbConnection');
         }
 
         $client = $connection->getDynamoDbClient();
@@ -362,13 +361,13 @@ class Model extends BaseModel
 
         // Adicionar GSI indexes
         $gsiIndexes = $this->getGsiIndexes();
-        if (!empty($gsiIndexes)) {
+        if (! empty($gsiIndexes)) {
             $tableDefinition['GlobalSecondaryIndexes'] = $this->buildGsiDefinitions($gsiIndexes);
         }
 
         // Adicionar LSI indexes (se tiver Sort Key)
         $lsiIndexes = $this->getLsiIndexes();
-        if (!empty($lsiIndexes) && $this->getSortKey()) {
+        if (! empty($lsiIndexes) && $this->getSortKey()) {
             $tableDefinition['LocalSecondaryIndexes'] = $this->buildLsiDefinitions($lsiIndexes);
         }
 
@@ -397,8 +396,6 @@ class Model extends BaseModel
 
     /**
      * Obter definições de atributos para a tabela.
-     *
-     * @return array
      */
     protected function getAttributeDefinitions(): array
     {
@@ -407,7 +404,7 @@ class Model extends BaseModel
 
         // Partition Key
         $partitionKey = $this->getPartitionKey();
-        if ($partitionKey && !in_array($partitionKey, $processed)) {
+        if ($partitionKey && ! in_array($partitionKey, $processed)) {
             $attributes[] = [
                 'AttributeName' => $partitionKey,
                 'AttributeType' => $this->getAttributeType($partitionKey),
@@ -417,7 +414,7 @@ class Model extends BaseModel
 
         // Sort Key
         $sortKey = $this->getSortKey();
-        if ($sortKey && !in_array($sortKey, $processed)) {
+        if ($sortKey && ! in_array($sortKey, $processed)) {
             $attributes[] = [
                 'AttributeName' => $sortKey,
                 'AttributeType' => $this->getAttributeType($sortKey),
@@ -427,7 +424,7 @@ class Model extends BaseModel
 
         // GSI Keys
         foreach ($this->getGsiIndexes() as $indexConfig) {
-            if (!empty($indexConfig['partition_key']) && !in_array($indexConfig['partition_key'], $processed)) {
+            if (! empty($indexConfig['partition_key']) && ! in_array($indexConfig['partition_key'], $processed)) {
                 $attributes[] = [
                     'AttributeName' => $indexConfig['partition_key'],
                     'AttributeType' => $this->getAttributeType($indexConfig['partition_key']),
@@ -435,7 +432,7 @@ class Model extends BaseModel
                 $processed[] = $indexConfig['partition_key'];
             }
 
-            if (!empty($indexConfig['sort_key']) && !in_array($indexConfig['sort_key'], $processed)) {
+            if (! empty($indexConfig['sort_key']) && ! in_array($indexConfig['sort_key'], $processed)) {
                 $attributes[] = [
                     'AttributeName' => $indexConfig['sort_key'],
                     'AttributeType' => $this->getAttributeType($indexConfig['sort_key']),
@@ -446,7 +443,7 @@ class Model extends BaseModel
 
         // LSI Keys (se existir)
         foreach ($this->getLsiIndexes() as $indexConfig) {
-            if (!empty($indexConfig['sort_key']) && !in_array($indexConfig['sort_key'], $processed)) {
+            if (! empty($indexConfig['sort_key']) && ! in_array($indexConfig['sort_key'], $processed)) {
                 $attributes[] = [
                     'AttributeName' => $indexConfig['sort_key'],
                     'AttributeType' => $this->getAttributeType($indexConfig['sort_key']),
@@ -460,8 +457,6 @@ class Model extends BaseModel
 
     /**
      * Obter Key Schema para a tabela.
-     *
-     * @return array
      */
     protected function getKeySchema(): array
     {
@@ -481,9 +476,6 @@ class Model extends BaseModel
 
     /**
      * Construir definições de GSI.
-     *
-     * @param array $gsiIndexes
-     * @return array
      */
     protected function buildGsiDefinitions(array $gsiIndexes): array
     {
@@ -501,7 +493,7 @@ class Model extends BaseModel
             ];
 
             // Adicionar Sort Key se existir
-            if (!empty($indexConfig['sort_key'])) {
+            if (! empty($indexConfig['sort_key'])) {
                 $gsi['KeySchema'][] = [
                     'AttributeName' => $indexConfig['sort_key'],
                     'KeyType' => 'RANGE',
@@ -516,9 +508,6 @@ class Model extends BaseModel
 
     /**
      * Construir definições de LSI.
-     *
-     * @param array $lsiIndexes
-     * @return array
      */
     protected function buildLsiDefinitions(array $lsiIndexes): array
     {
@@ -545,7 +534,6 @@ class Model extends BaseModel
     /**
      * Detectar tipo de atributo DynamoDB a partir dos casts do model.
      *
-     * @param string $attributeName
      * @return string S (String), N (Number), B (Binary)
      */
     protected function getAttributeType(string $attributeName): string
@@ -557,6 +545,7 @@ class Model extends BaseModel
             if ($this->keyType === 'int') {
                 return 'N';
             }
+
             // Por padrão, Primary Key é String (mais flexível - aceita UUIDs, IDs customizados, etc.)
             return 'S';
         }
@@ -597,4 +586,3 @@ class Model extends BaseModel
         return 'S';
     }
 }
-

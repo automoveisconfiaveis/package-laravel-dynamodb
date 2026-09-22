@@ -2,33 +2,29 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection;
 
-use Illuminate\Database\Connection as BaseConnection;
-use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Grammar as DynamoDbGrammar;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Processor as DynamoDbProcessor;
+use AutomoveisConfiaveis\LaravelDynamoDb\Exceptions\InvalidQueryException;
+use AutomoveisConfiaveis\LaravelDynamoDb\Exceptions\UnsupportedOperationException;
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\DynamoDb\Marshaler;
+use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Query\Builder;
 
 class DynamoDbConnection extends BaseConnection
 {
     /**
      * DynamoDB Client instance.
-     *
-     * @var DynamoDbClient
      */
     protected DynamoDbClient $dynamoDbClient;
 
     /**
      * Marshaler instance.
-     *
-     * @var Marshaler
      */
     protected Marshaler $marshaler;
 
     /**
      * Create a new DynamoDB connection instance.
-     *
-     * @param DynamoDbClient $client
-     * @param array $config
      */
     public function __construct(DynamoDbClient $client, array $config = [])
     {
@@ -36,14 +32,14 @@ class DynamoDbConnection extends BaseConnection
         // Connection base espera: $pdo, $database, $tablePrefix, $config
         // Para DynamoDB, usamos 'table' em vez de 'database'
         parent::__construct(
-            fn() => null, // Closure que retorna null (PDO não usado)
+            fn () => null, // Closure que retorna null (PDO não usado)
             $config['table'] ?? $config['database'] ?? 'default',
             '',
             $config
         );
 
         $this->dynamoDbClient = $client;
-        $this->marshaler = new Marshaler();
+        $this->marshaler = new Marshaler;
     }
 
     /**
@@ -63,13 +59,11 @@ class DynamoDbConnection extends BaseConnection
      */
     protected function getDefaultPostProcessor()
     {
-        return new DynamoDbProcessor();
+        return new DynamoDbProcessor;
     }
 
     /**
      * Get the DynamoDB Client instance.
-     *
-     * @return DynamoDbClient
      */
     public function getDynamoDbClient(): DynamoDbClient
     {
@@ -78,8 +72,6 @@ class DynamoDbConnection extends BaseConnection
 
     /**
      * Get the Marshaler instance.
-     *
-     * @return Marshaler
      */
     public function getMarshaler(): Marshaler
     {
@@ -89,9 +81,9 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Execute a select query.
      *
-     * @param string $query
-     * @param array $bindings
-     * @param bool $useReadPdo
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
      * @return array
      */
     public function select($query, $bindings = [], $useReadPdo = true)
@@ -101,13 +93,12 @@ class DynamoDbConnection extends BaseConnection
             return $this->executeDynamoDbSelect($query);
         }
 
-        throw new \RuntimeException('DynamoDB does not support SQL queries');
+        throw new UnsupportedOperationException('DynamoDB does not support SQL queries');
     }
 
     /**
      * Execute a select query against DynamoDB.
      *
-     * @param array $compiled
      * @return array
      */
     protected function executeDynamoDbSelect(array $compiled)
@@ -133,11 +124,11 @@ class DynamoDbConnection extends BaseConnection
                         'RequestItems' => [
                             $tableName => [
                                 'Keys' => array_map(
-                                    fn($key) => $this->marshaler->marshalItem($key),
+                                    fn ($key) => $this->marshaler->marshalItem($key),
                                     $chunk
-                                )
-                            ]
-                        ]
+                                ),
+                            ],
+                        ],
                     ];
 
                     // Adicionar ProjectionExpression se houver
@@ -163,7 +154,7 @@ class DynamoDbConnection extends BaseConnection
                         if (app()->bound('log')) {
                             app('log')->warning('DynamoDB BatchGetItem: Unprocessed keys', [
                                 'table' => $tableName,
-                                'count' => count($result['UnprocessedKeys'][$tableName]['Keys'])
+                                'count' => count($result['UnprocessedKeys'][$tableName]['Keys']),
                             ]);
                         }
                     }
@@ -172,7 +163,7 @@ class DynamoDbConnection extends BaseConnection
 
             case 'GetItem':
                 // Marshal Key antes de enviar
-                if (isset($params['Key']) && !empty($params['Key'])) {
+                if (isset($params['Key']) && ! empty($params['Key'])) {
                     $params['Key'] = $this->marshaler->marshalItem($params['Key']);
                 }
 
@@ -184,7 +175,7 @@ class DynamoDbConnection extends BaseConnection
 
             case 'Query':
                 // Marshal ExpressionAttributeValues antes de enviar
-                if (isset($params['ExpressionAttributeValues']) && !empty($params['ExpressionAttributeValues'])) {
+                if (isset($params['ExpressionAttributeValues']) && ! empty($params['ExpressionAttributeValues'])) {
                     $params['ExpressionAttributeValues'] = $this->marshaler->marshalItem($params['ExpressionAttributeValues']);
                 }
 
@@ -199,7 +190,7 @@ class DynamoDbConnection extends BaseConnection
 
                 $hasLimit = isset($params['Limit']);
                 $limit = $params['Limit'] ?? null;
-                $hasFilterExpression = isset($params['FilterExpression']) && !empty($params['FilterExpression']);
+                $hasFilterExpression = isset($params['FilterExpression']) && ! empty($params['FilterExpression']);
 
                 // Otimização: Quando há FilterExpression e limit pequeno (≤50), processa em lotes menores
                 // e para assim que encontrar resultados suficientes. Isso acelera o caso "não encontrado".
@@ -231,7 +222,7 @@ class DynamoDbConnection extends BaseConnection
 
                         $result = $this->dynamoDbClient->query($params);
                         $batchItems = array_map(
-                            fn($item) => $this->marshaler->unmarshalItem($item),
+                            fn ($item) => $this->marshaler->unmarshalItem($item),
                             $result['Items'] ?? []
                         );
 
@@ -241,7 +232,7 @@ class DynamoDbConnection extends BaseConnection
                         $currentKey = $result['LastEvaluatedKey'] ?? null;
 
                         // Para se encontrou resultados suficientes ou processou muito
-                        if (count($items) >= $limit || $totalScanned >= $maxScanned || !$currentKey) {
+                        if (count($items) >= $limit || $totalScanned >= $maxScanned || ! $currentKey) {
                             break;
                         }
                     } while (true);
@@ -269,7 +260,7 @@ class DynamoDbConnection extends BaseConnection
                     // Paginação automática: se houver LastEvaluatedKey e não há Limit estrito,
                     // buscar mais páginas automaticamente (até 1MB ou limit definido)
                     $items = array_map(
-                        fn($item) => $this->marshaler->unmarshalItem($item),
+                        fn ($item) => $this->marshaler->unmarshalItem($item),
                         $result['Items'] ?? []
                     );
 
@@ -281,12 +272,12 @@ class DynamoDbConnection extends BaseConnection
                     // Quando não há FilterExpression, as condições do índice já filtram tudo - se não encontrou
                     // na primeira página, não vai encontrar nas próximas (mesma partition+sort key).
                     // COM FilterExpression, pode haver registros nas próximas páginas que passem no filtro.
-                    $shouldPaginate = $lastEvaluatedKey && (!$hasLimit || ($limit && count($items) < $limit));
+                    $shouldPaginate = $lastEvaluatedKey && (! $hasLimit || ($limit && count($items) < $limit));
                     $isSmallLimit = $hasLimit && $limit <= 50;
                     $noResultsInFirstPage = count($items) === 0;
-                    $hasFilterExpression = isset($params['FilterExpression']) && !empty($params['FilterExpression']);
-                    
-                    if ($isSmallLimit && $noResultsInFirstPage && !$hasFilterExpression) {
+                    $hasFilterExpression = isset($params['FilterExpression']) && ! empty($params['FilterExpression']);
+
+                    if ($isSmallLimit && $noResultsInFirstPage && ! $hasFilterExpression) {
                         // Para limits pequenos SEM FilterExpression, se não encontrou nada na primeira página, não continuar
                         // (com FilterExpression pode haver registros filtrados nas próximas páginas)
                         $shouldPaginate = false;
@@ -306,7 +297,7 @@ class DynamoDbConnection extends BaseConnection
 
                             $nextResult = $this->dynamoDbClient->query($params);
                             $nextItems = array_map(
-                                fn($item) => $this->marshaler->unmarshalItem($item),
+                                fn ($item) => $this->marshaler->unmarshalItem($item),
                                 $nextResult['Items'] ?? []
                             );
 
@@ -314,7 +305,7 @@ class DynamoDbConnection extends BaseConnection
                             $currentKey = $nextResult['LastEvaluatedKey'] ?? null;
 
                             // Limitar para evitar loops infinitos (máximo 10 páginas automáticas)
-                            if (count($allItems) >= ($limit ?? 1000) || !$currentKey) {
+                            if (count($allItems) >= ($limit ?? 1000) || ! $currentKey) {
                                 break;
                             }
                         } while ($currentKey && count($allItems) < ($limit ?? 1000));
@@ -327,7 +318,7 @@ class DynamoDbConnection extends BaseConnection
 
             case 'Scan':
                 // Marshal ExpressionAttributeValues antes de enviar
-                if (isset($params['ExpressionAttributeValues']) && !empty($params['ExpressionAttributeValues'])) {
+                if (isset($params['ExpressionAttributeValues']) && ! empty($params['ExpressionAttributeValues'])) {
                     $params['ExpressionAttributeValues'] = $this->marshaler->marshalItem($params['ExpressionAttributeValues']);
                 }
 
@@ -348,7 +339,7 @@ class DynamoDbConnection extends BaseConnection
                 }
 
                 $items = array_map(
-                    fn($item) => $this->marshaler->unmarshalItem($item),
+                    fn ($item) => $this->marshaler->unmarshalItem($item),
                     $result['Items'] ?? []
                 );
 
@@ -359,12 +350,12 @@ class DynamoDbConnection extends BaseConnection
 
                 // OTIMIZAÇÃO: Para Scan com limits pequenos (≤50) SEM FilterExpression, não paginar se vazio
                 // Com FilterExpression, pode haver registros filtrados nas próximas páginas
-                $shouldPaginate = $lastEvaluatedKey && (!$hasLimit || ($limit && count($items) < $limit));
+                $shouldPaginate = $lastEvaluatedKey && (! $hasLimit || ($limit && count($items) < $limit));
                 $isSmallLimit = $hasLimit && $limit <= 50;
                 $noResultsInFirstPage = count($items) === 0;
-                $hasFilterExpression = isset($params['FilterExpression']) && !empty($params['FilterExpression']);
-                
-                if ($isSmallLimit && $noResultsInFirstPage && !$hasFilterExpression) {
+                $hasFilterExpression = isset($params['FilterExpression']) && ! empty($params['FilterExpression']);
+
+                if ($isSmallLimit && $noResultsInFirstPage && ! $hasFilterExpression) {
                     // Para limits pequenos SEM FilterExpression, se não encontrou nada, não continuar
                     $shouldPaginate = false;
                 }
@@ -381,7 +372,7 @@ class DynamoDbConnection extends BaseConnection
 
                         $nextResult = $this->dynamoDbClient->scan($params);
                         $nextItems = array_map(
-                            fn($item) => $this->marshaler->unmarshalItem($item),
+                            fn ($item) => $this->marshaler->unmarshalItem($item),
                             $nextResult['Items'] ?? []
                         );
 
@@ -389,7 +380,7 @@ class DynamoDbConnection extends BaseConnection
                         $currentKey = $nextResult['LastEvaluatedKey'] ?? null;
 
                         // Limitar para evitar loops infinitos
-                        if (count($allItems) >= ($limit ?? 1000) || !$currentKey) {
+                        if (count($allItems) >= ($limit ?? 1000) || ! $currentKey) {
                             break;
                         }
                     } while ($currentKey && count($allItems) < ($limit ?? 1000));
@@ -400,33 +391,29 @@ class DynamoDbConnection extends BaseConnection
                 break;
 
             default:
-                throw new \RuntimeException("Unknown operation: {$operation}");
+                throw new UnsupportedOperationException("Unknown operation: {$operation}");
         }
 
         // Converter para objetos (compatível com Laravel)
-        return array_map(fn($item) => (object) $item, $items);
+        return array_map(fn ($item) => (object) $item, $items);
     }
 
     /**
      * Cache de metadados de tabelas.
-     *
-     * @var array
      */
     protected static array $tableMetadataCache = [];
 
     /**
      * Get table metadata (structure, indexes) with caching.
      *
-     * @param string $tableName
-     * @param bool $forceRefresh Force refresh cache
-     * @return array
+     * @param  bool  $forceRefresh  Force refresh cache
      */
     public function getTableMetadata(string $tableName, bool $forceRefresh = false): array
     {
         $cacheKey = "dynamodb_table_{$tableName}_metadata";
 
         // Verificar cache
-        if (!$forceRefresh && isset(self::$tableMetadataCache[$cacheKey])) {
+        if (! $forceRefresh && isset(self::$tableMetadataCache[$cacheKey])) {
             $cached = self::$tableMetadataCache[$cacheKey];
 
             // Cache válido por 1 hora
@@ -472,8 +459,7 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Clear table metadata cache.
      *
-     * @param string|null $tableName If null, clears all cache
-     * @return void
+     * @param  string|null  $tableName  If null, clears all cache
      */
     public function clearMetadataCache(?string $tableName = null): void
     {
@@ -487,9 +473,7 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Get the total count of items in a table using efficient COUNT scan.
      *
-     * @param string $tableName
-     * @param array $filterExpression Optional filter expression
-     * @return int
+     * @param  array  $filterExpression  Optional filter expression
      */
     public function countItems(string $tableName, array $filterExpression = []): int
     {
@@ -499,7 +483,7 @@ class DynamoDbConnection extends BaseConnection
         ];
 
         // Adicionar FilterExpression se fornecido
-        if (!empty($filterExpression)) {
+        if (! empty($filterExpression)) {
             $params = array_merge($params, $filterExpression);
         }
 
@@ -512,7 +496,7 @@ class DynamoDbConnection extends BaseConnection
             }
 
             // Marshal ExpressionAttributeValues antes de enviar
-            if (isset($params['ExpressionAttributeValues']) && !empty($params['ExpressionAttributeValues'])) {
+            if (isset($params['ExpressionAttributeValues']) && ! empty($params['ExpressionAttributeValues'])) {
                 $params['ExpressionAttributeValues'] = $this->marshaler->marshalItem($params['ExpressionAttributeValues']);
             }
 
@@ -527,10 +511,8 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Count items using parallel scans for better performance on large tables.
      *
-     * @param string $tableName
-     * @param int $segments Number of parallel segments (default: 4)
-     * @param array $filterExpression Optional filter expression
-     * @return int
+     * @param  int  $segments  Number of parallel segments (default: 4)
+     * @param  array  $filterExpression  Optional filter expression
      */
     public function countItemsParallel(string $tableName, int $segments = 4, array $filterExpression = []): int
     {
@@ -544,12 +526,12 @@ class DynamoDbConnection extends BaseConnection
         ];
 
         // Adicionar FilterExpression se fornecido
-        if (!empty($filterExpression)) {
+        if (! empty($filterExpression)) {
             $params = array_merge($params, $filterExpression);
         }
 
         // Marshal ExpressionAttributeValues se houver
-        if (isset($params['ExpressionAttributeValues']) && !empty($params['ExpressionAttributeValues'])) {
+        if (isset($params['ExpressionAttributeValues']) && ! empty($params['ExpressionAttributeValues'])) {
             $params['ExpressionAttributeValues'] = $this->marshaler->marshalItem($params['ExpressionAttributeValues']);
         }
 
@@ -594,8 +576,8 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Execute an insert statement.
      *
-     * @param string $query
-     * @param array $bindings
+     * @param  string  $query
+     * @param  array  $bindings
      * @return bool
      */
     public function insert($query, $bindings = [])
@@ -603,16 +585,16 @@ class DynamoDbConnection extends BaseConnection
         // $query é array compilado pelo Grammar
         if (is_array($query)) {
             $this->executeDynamoDbPutItem($query);
+
             return true;
         }
 
-        throw new \RuntimeException('Invalid insert query format');
+        throw new InvalidQueryException('Invalid insert query format');
     }
 
     /**
      * Execute PutItem operation.
      *
-     * @param array $compiled
      * @return void
      */
     protected function executeDynamoDbPutItem(array $compiled)
@@ -623,7 +605,7 @@ class DynamoDbConnection extends BaseConnection
 
         // Validar que o Item não está vazio
         if (empty($item)) {
-            throw new \RuntimeException("Cannot insert empty item into table '{$tableName}'");
+            throw new InvalidQueryException("Cannot insert empty item into table '{$tableName}'");
         }
 
         // Log para debug
@@ -645,8 +627,8 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Execute an update statement.
      *
-     * @param string $query
-     * @param array $bindings
+     * @param  string  $query
+     * @param  array  $bindings
      * @return int
      */
     public function update($query, $bindings = [])
@@ -654,16 +636,16 @@ class DynamoDbConnection extends BaseConnection
         // $query é array compilado pelo Grammar
         if (is_array($query)) {
             $this->executeDynamoDbUpdateItem($query);
+
             return 1; // Retornar número de linhas afetadas
         }
 
-        throw new \RuntimeException('Invalid update query format');
+        throw new InvalidQueryException('Invalid update query format');
     }
 
     /**
      * Execute UpdateItem operation.
      *
-     * @param array $compiled
      * @return void
      */
     protected function executeDynamoDbUpdateItem(array $compiled)
@@ -697,8 +679,8 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Execute a delete statement.
      *
-     * @param string $query
-     * @param array $bindings
+     * @param  string  $query
+     * @param  array  $bindings
      * @return int
      */
     public function delete($query, $bindings = [])
@@ -706,16 +688,16 @@ class DynamoDbConnection extends BaseConnection
         // $query é array compilado pelo Grammar
         if (is_array($query)) {
             $this->executeDynamoDbDeleteItem($query);
+
             return 1; // Retornar número de linhas afetadas
         }
 
-        throw new \RuntimeException('Invalid delete query format');
+        throw new InvalidQueryException('Invalid delete query format');
     }
 
     /**
      * Execute DeleteItem operation.
      *
-     * @param array $compiled
      * @return void
      */
     protected function executeDynamoDbDeleteItem(array $compiled)
@@ -731,7 +713,7 @@ class DynamoDbConnection extends BaseConnection
     /**
      * Get a new query builder instance.
      *
-     * @return \Illuminate\Database\Query\Builder
+     * @return Builder
      */
     public function query()
     {
