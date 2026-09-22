@@ -2,40 +2,35 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
-use Illuminate\Database\Query\Builder as BaseBuilder;
-use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Index\IndexResolver;
+use Illuminate\Database\Query\Builder as BaseBuilder;
+use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
 
 class Grammar extends BaseGrammar
 {
     /**
      * IndexResolver instance.
-     *
-     * @var IndexResolver|null
      */
     protected ?IndexResolver $indexResolver = null;
 
     /**
      * Get or create IndexResolver.
-     *
-     * @param BaseBuilder|null $query
-     * @return IndexResolver|null
      */
     protected function getIndexResolver(?BaseBuilder $query = null): ?IndexResolver
     {
-        if (!$query) {
+        if (! $query) {
             return null;
         }
 
         // Tentar obter model do query builder
         $model = $this->getModelFromQuery($query);
 
-        if (!$model) {
+        if (! $model) {
             return null;
         }
 
-        if (!$this->indexResolver) {
+        if (! $this->indexResolver) {
             $this->indexResolver = new IndexResolver($model);
         } else {
             $this->indexResolver->setModel($model);
@@ -46,9 +41,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Get model instance from query.
-     *
-     * @param BaseBuilder $query
-     * @return DynamoDbModel|null
      */
     protected function getModelFromQuery(BaseBuilder $query): ?DynamoDbModel
     {
@@ -62,14 +54,20 @@ class Grammar extends BaseGrammar
 
         return null;
     }
+
     /**
      * Compile a select query into DynamoDB operation.
      *
-     * @param BaseBuilder $query
      * @return array
      */
     public function compileSelect(BaseBuilder $query)
     {
+        // O Eloquent qualifica as colunas de chave como "tabela.coluna" (ex.: find()
+        // usa getQualifiedKeyName()). O DynamoDB opera sobre o nome do atributo puro,
+        // então removemos o prefixo da tabela das cláusulas where antes de resolver a
+        // operação — sem isso, find() não casa a partition key e cai em Scan.
+        $this->stripTableQualifierFromWheres($query);
+
         // Determinar qual operação usar (GetItem, Query, Scan)
         $operation = $this->determineOperation($query);
 
@@ -100,9 +98,35 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Remove o prefixo "tabela." das colunas das cláusulas where.
+     *
+     * O Eloquent qualifica colunas (getQualifiedKeyName() => "tabela.coluna"),
+     * mas o DynamoDB usa o nome do atributo puro. Sem esta normalização, o
+     * find() (e qualquer where com coluna qualificada) não casa a partition key
+     * e a query degrada para Scan, retornando resultado vazio.
+     */
+    protected function stripTableQualifierFromWheres(BaseBuilder $query): void
+    {
+        $from = $query->from;
+
+        if (! is_string($from) || $from === '') {
+            return;
+        }
+
+        $prefix = $from.'.';
+
+        foreach ($query->wheres as $i => $where) {
+            $column = $where['column'] ?? null;
+
+            if (is_string($column) && str_starts_with($column, $prefix)) {
+                $query->wheres[$i]['column'] = substr($column, strlen($prefix));
+            }
+        }
+    }
+
+    /**
      * Determine which DynamoDB operation to use.
      *
-     * @param BaseBuilder $query
      * @return string
      */
     protected function determineOperation(BaseBuilder $query)
@@ -131,16 +155,18 @@ class Grammar extends BaseGrammar
                 // sairia errada e/ou os filtros seriam ignorados (AUTOCONF-8-91B).
                 if ($indexMatch['index_type'] === 'primary' &&
                     count($indexMatch['key_conditions']) === 1 &&
-                    !$resolver->getSortKey()) {
+                    ! $resolver->getSortKey()) {
                     $keyColumns = array_column($indexMatch['key_conditions'], 'column');
                     $remainingWheres = array_filter($wheres, function ($where) use ($keyColumns) {
                         $col = $where['column'] ?? null;
-                        return $col === null || !in_array($col, $keyColumns);
+
+                        return $col === null || ! in_array($col, $keyColumns);
                     });
                     if (empty($remainingWheres)) {
                         return 'GetItem'; // Primary key simples sem sort key e sem filtros extras
                     }
                 }
+
                 return 'Query'; // Usar Query com índice (e FilterExpression quando houver outras condições)
             }
         }
@@ -152,8 +178,6 @@ class Grammar extends BaseGrammar
     /**
      * Compile GetItem operation.
      *
-     * @param BaseBuilder $query
-     * @param array $params
      * @return array
      */
     protected function compileGetItem(BaseBuilder $query, array $params)
@@ -180,7 +204,7 @@ class Grammar extends BaseGrammar
 
         // Fallback defensivo: se não foi possível resolver a partition key,
         // preserva o comportamento anterior (primeira condição como chave).
-        if (empty($key) && !empty($query->wheres)) {
+        if (empty($key) && ! empty($query->wheres)) {
             $first = $query->wheres[0];
             $key = [$first['column'] => $first['value']];
         }
@@ -196,22 +220,20 @@ class Grammar extends BaseGrammar
     /**
      * Compile Query operation.
      *
-     * @param BaseBuilder $query
-     * @param array $params
      * @return array
      */
     protected function compileQuery(BaseBuilder $query, array $params)
     {
         $resolver = $this->getIndexResolver($query);
 
-        if (!$resolver) {
+        if (! $resolver) {
             // Fallback para Scan se não conseguir resolver índices
             return $this->compileScan($query, $params);
         }
 
         $indexMatch = $resolver->findBestIndex($query);
 
-        if (!$indexMatch) {
+        if (! $indexMatch) {
             return $this->compileScan($query, $params);
         }
 
@@ -227,7 +249,7 @@ class Grammar extends BaseGrammar
         }
 
         // KeyConditionExpression é obrigatório para Query
-        if (!empty($keyConditions['expression'])) {
+        if (! empty($keyConditions['expression'])) {
             $params['KeyConditionExpression'] = $keyConditions['expression'];
             $params['ExpressionAttributeNames'] = array_merge(
                 $params['ExpressionAttributeNames'] ?? [],
@@ -243,13 +265,13 @@ class Grammar extends BaseGrammar
         // Usar contador maior que o usado em KeyConditionExpression para evitar conflitos
         $baseCounter = count($keyConditions['attributeNames'] ?? []);
 
-        if (!empty($indexMatch['filter_conditions'])) {
+        if (! empty($indexMatch['filter_conditions'])) {
             $filterConditions = $this->compileWheresForDynamoDb(
                 $this->createQueryFromWheres($query, $indexMatch['filter_conditions']),
                 $baseCounter
             );
 
-            if (!empty($filterConditions['expression'])) {
+            if (! empty($filterConditions['expression'])) {
                 $params['FilterExpression'] = $filterConditions['expression'];
                 $params['ExpressionAttributeNames'] = array_merge(
                     $params['ExpressionAttributeNames'] ?? [],
@@ -268,12 +290,12 @@ class Grammar extends BaseGrammar
                 $indexMatch['key_conditions']
             );
 
-            if (!empty($remainingFilters)) {
+            if (! empty($remainingFilters)) {
                 $filterConditions = $this->compileWheresForDynamoDb(
                     $this->createQueryFromWheres($query, $remainingFilters),
                     $baseCounter
                 );
-                if (!empty($filterConditions['expression'])) {
+                if (! empty($filterConditions['expression'])) {
                     $params['FilterExpression'] = $filterConditions['expression'];
                     $params['ExpressionAttributeNames'] = array_merge(
                         $params['ExpressionAttributeNames'] ?? [],
@@ -330,10 +352,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile key conditions into KeyConditionExpression.
-     *
-     * @param array $keyConditions
-     * @param array $params
-     * @return array
      */
     protected function compileKeyConditions(array $keyConditions, array &$params): array
     {
@@ -386,39 +404,30 @@ class Grammar extends BaseGrammar
 
     /**
      * Get remaining filters that weren't used in key conditions.
-     *
-     * @param BaseBuilder $query
-     * @param array $keyConditions
-     * @return array
      */
     protected function getRemainingFilters(BaseBuilder $query, array $keyConditions): array
     {
-        $keyColumns = array_map(fn($kc) => $kc['column'], $keyConditions);
+        $keyColumns = array_map(fn ($kc) => $kc['column'], $keyConditions);
 
-        return array_filter($query->wheres, function($where) use ($keyColumns) {
-            return !in_array($where['column'], $keyColumns);
+        return array_filter($query->wheres, function ($where) use ($keyColumns) {
+            return ! in_array($where['column'], $keyColumns);
         });
     }
 
     /**
      * Create a query builder with specific where clauses.
-     *
-     * @param BaseBuilder $query
-     * @param array $wheres
-     * @return BaseBuilder
      */
     protected function createQueryFromWheres(BaseBuilder $query, array $wheres): BaseBuilder
     {
         $newQuery = clone $query;
         $newQuery->wheres = $wheres;
+
         return $newQuery;
     }
 
     /**
      * Compile Scan operation.
      *
-     * @param BaseBuilder $query
-     * @param array $params
      * @return array
      */
     protected function compileScan(BaseBuilder $query, array $params)
@@ -426,7 +435,7 @@ class Grammar extends BaseGrammar
         // FilterExpression será compilado a partir dos wheres
         $filterExpression = $this->compileWheresForDynamoDb($query, 0);
 
-        if (!empty($filterExpression['expression'])) {
+        if (! empty($filterExpression['expression'])) {
             $params['FilterExpression'] = $filterExpression['expression'];
             $params['ExpressionAttributeNames'] = $filterExpression['attributeNames'] ?? [];
             $params['ExpressionAttributeValues'] = $filterExpression['attributeValues'] ?? [];
@@ -450,10 +459,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Add ProjectionExpression to params if query has specific columns selected.
-     *
-     * @param BaseBuilder $query
-     * @param array $params
-     * @return void
      */
     protected function addProjectionExpression(BaseBuilder $query, array &$params): void
     {
@@ -488,7 +493,7 @@ class Grammar extends BaseGrammar
         }
 
         // Apenas adicionar ProjectionExpression se houver colunas válidas
-        if (!empty($projectionParts)) {
+        if (! empty($projectionParts)) {
             $params['ProjectionExpression'] = implode(', ', $projectionParts);
             $params['ExpressionAttributeNames'] = $attributeNames;
         }
@@ -497,9 +502,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile where clauses to FilterExpression for DynamoDB.
      *
-     * @param BaseBuilder $query
-     * @param int $baseCounter Contador base para evitar conflitos com KeyConditionExpression
-     * @return array
+     * @param  int  $baseCounter  Contador base para evitar conflitos com KeyConditionExpression
      */
     protected function compileWheresForDynamoDb(BaseBuilder $query, int $baseCounter = 0): array
     {
@@ -557,7 +560,7 @@ class Grammar extends BaseGrammar
 
                     if (empty($values)) {
                         // IN vazio nunca casa: mantém o comportamento do SQL (nenhum resultado)
-                        $expression[] = 'attribute_not_exists(' . $nameKey . ')';
+                        $expression[] = 'attribute_not_exists('.$nameKey.')';
                         $attributeNames[$nameKey] = $where['column'];
                         break;
                     }
@@ -569,7 +572,7 @@ class Grammar extends BaseGrammar
                         $attributeValues[$placeholder] = $inValue;
                     }
 
-                    $expression[] = "{$nameKey} IN (" . implode(', ', $placeholders) . ')';
+                    $expression[] = "{$nameKey} IN (".implode(', ', $placeholders).')';
                     $attributeNames[$nameKey] = $where['column'];
                     break;
 
@@ -600,9 +603,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Convert SQL operator to DynamoDB operator.
-     *
-     * @param string $operator
-     * @return string
      */
     protected function convertOperator(string $operator): string
     {
@@ -620,8 +620,6 @@ class Grammar extends BaseGrammar
     /**
      * Compile an insert statement.
      *
-     * @param BaseBuilder $query
-     * @param array $values
      * @return array
      */
     public function compileInsert(BaseBuilder $query, array $values)
@@ -658,8 +656,6 @@ class Grammar extends BaseGrammar
     /**
      * Compile an update statement.
      *
-     * @param BaseBuilder $query
-     * @param array $values
      * @return array
      */
     public function compileUpdate(BaseBuilder $query, array $values)
@@ -690,7 +686,7 @@ class Grammar extends BaseGrammar
 
         $clauses = [];
         if (! empty($setExpressions)) {
-            $clauses[] = 'SET ' . implode(', ', $setExpressions);
+            $clauses[] = 'SET '.implode(', ', $setExpressions);
         }
 
         $params = [
@@ -712,7 +708,6 @@ class Grammar extends BaseGrammar
     /**
      * Compile a delete statement.
      *
-     * @param BaseBuilder $query
      * @return array
      */
     public function compileDelete(BaseBuilder $query)
@@ -729,9 +724,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Get table name from query.
-     *
-     * @param BaseBuilder $query
-     * @return string
      */
     protected function getTableName(BaseBuilder $query): string
     {
@@ -740,9 +732,6 @@ class Grammar extends BaseGrammar
 
     /**
      * Extract key from where clauses (simplificado).
-     *
-     * @param BaseBuilder $query
-     * @return array
      */
     protected function extractKeyFromWheres(BaseBuilder $query): array
     {
@@ -752,6 +741,7 @@ class Grammar extends BaseGrammar
                 $key[$where['column']] = $where['value'];
             }
         }
+
         return $key;
     }
 }
