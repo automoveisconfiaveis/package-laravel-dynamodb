@@ -159,6 +159,21 @@ class Model extends BaseModel
             return false;
         }
 
+        // Um UpdateItem não pode alterar atributos que compõem a chave primária:
+        // eles vão no Key (montado por setKeysForSaveQuery), nunca no UpdateExpression.
+        $partitionKey = $this->getPartitionKey();
+        if (isset($dirty[$partitionKey])) {
+            unset($dirty[$partitionKey]);
+        }
+        $sortKey = $this->getSortKey();
+        if ($sortKey && isset($dirty[$sortKey])) {
+            unset($dirty[$sortKey]);
+        }
+
+        if (count($dirty) === 0) {
+            return false;
+        }
+
         // Construir query com where na primary key
         $this->setKeysForSaveQuery($query);
 
@@ -192,6 +207,39 @@ class Model extends BaseModel
         );
 
         return true;
+    }
+
+    /**
+     * Set the keys for a save/update/delete query.
+     *
+     * Sobrescreve o Eloquent base (que chaveia por getKeyName() = 'id') para montar
+     * o WHERE a partir da partition key (e sort key, quando composta) reais do model.
+     * Sem isso, UpdateItem/DeleteItem em tabelas cuja chave não é 'id' (ou é composta
+     * pk+sk) recebem uma Key inválida: "The provided key element does not match the schema".
+     *
+     * @param  mixed  $query
+     * @return mixed
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        $partitionKey = $this->getPartitionKey();
+        $keyValue = $this->getOriginal($partitionKey) ?? $this->getAttribute($partitionKey);
+
+        if ($keyValue === null || $keyValue === '') {
+            throw new \RuntimeException("Cannot save model without partition key value: {$partitionKey}");
+        }
+
+        $query->where($partitionKey, '=', $keyValue);
+
+        $sortKey = $this->getSortKey();
+        if ($sortKey) {
+            $sortKeyValue = $this->getOriginal($sortKey) ?? $this->getAttribute($sortKey);
+            if ($sortKeyValue !== null && $sortKeyValue !== '') {
+                $query->where($sortKey, '=', $sortKeyValue);
+            }
+        }
+
+        return $query;
     }
 
     /**
