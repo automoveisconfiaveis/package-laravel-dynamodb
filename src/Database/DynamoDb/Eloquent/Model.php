@@ -112,6 +112,19 @@ class Model extends BaseModel
         // Obter atributos
         $attributes = $this->getAttributes();
 
+        // Garantir que a partition key está presente (regressão corrigida: v0.2.x
+        // deixou de preencher o id no insert). Fallback: usa o valor do atributo
+        // (ex.: definido no evento creating) ou gera um UUID.
+        $partitionKey = $this->getPartitionKey();
+        if (empty($attributes[$partitionKey])) {
+            $id = $this->getAttribute($partitionKey);
+            if (empty($id)) {
+                $id = \Illuminate\Support\Str::uuid()->toString();
+                $this->setAttribute($partitionKey, $id);
+            }
+            $attributes[$partitionKey] = $id;
+        }
+
         // Executar insert via connection
         $query->getConnection()->insert(
             $query->getQuery()->getGrammar()->compileInsert($query->getQuery(), $attributes)
