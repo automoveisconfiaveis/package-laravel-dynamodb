@@ -1,7 +1,7 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "joaquim/laravel-dynamodb",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "description": "DynamoDB driver for Laravel with automatic index resolution and Eloquent support",
     "keywords": [
         "laravel",

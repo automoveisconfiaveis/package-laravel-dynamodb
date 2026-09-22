@@ -667,33 +667,30 @@ class Grammar extends BaseGrammar
         $key = $this->extractKeyFromWheres($query);
 
         $setExpressions = [];
-        $removeExpressions = [];
         $expressionAttributeNames = [];
         $expressionAttributeValues = [];
         $counter = 0;
 
         foreach ($values as $column => $value) {
+            // Campo vazio (null ou string vazia) é removido do payload: o atributo não é alterado.
+            // Evita o erro do DynamoDB ao gravar '' em atributo que é chave de índice (GSI/LSI),
+            // onde string vazia não é aceita.
+            if ($value === null || $value === '') {
+                continue;
+            }
+
             $counter++;
             $nameKey = "#attr{$counter}";
-            $expressionAttributeNames[$nameKey] = $column;
+            $valueKey = ":val{$counter}";
 
-            if ($value === null) {
-                // DynamoDB não aceita NULL em atributo de chave de índice (GSI/LSI).
-                // Remover o atributo (o item sai do índice) em vez de SET = NULL.
-                $removeExpressions[] = $nameKey;
-            } else {
-                $valueKey = ":val{$counter}";
-                $setExpressions[] = "{$nameKey} = {$valueKey}";
-                $expressionAttributeValues[$valueKey] = $value;
-            }
+            $expressionAttributeNames[$nameKey] = $column;
+            $setExpressions[] = "{$nameKey} = {$valueKey}";
+            $expressionAttributeValues[$valueKey] = $value;
         }
 
         $clauses = [];
         if (! empty($setExpressions)) {
             $clauses[] = 'SET ' . implode(', ', $setExpressions);
-        }
-        if (! empty($removeExpressions)) {
-            $clauses[] = 'REMOVE ' . implode(', ', $removeExpressions);
         }
 
         $params = [

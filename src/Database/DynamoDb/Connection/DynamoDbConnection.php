@@ -670,6 +670,12 @@ class DynamoDbConnection extends BaseConnection
     {
         $params = $compiled['params'] ?? $compiled;
 
+        // Sem nada para alterar (ex.: todos os campos vieram vazios e foram removidos do payload):
+        // não chamar UpdateItem, pois o DynamoDB rejeita UpdateExpression vazio.
+        if (trim((string) ($params['UpdateExpression'] ?? '')) === '') {
+            return;
+        }
+
         $updateParams = [
             'TableName' => $params['TableName'] ?? $this->getConfig('table'),
             'Key' => $this->marshaler->marshalItem($params['Key']),
