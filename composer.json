@@ -1,7 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "automoveisconfiaveis/laravel-dynamodb",
-    "version": "0.2.7",
     "description": "DynamoDB driver for Laravel with automatic index resolution and Eloquent support",
     "keywords": [
         "laravel",
@@ -16,22 +15,28 @@
     ],
     "type": "library",
     "license": "MIT",
+    "homepage": "https://github.com/automoveisconfiaveis/package-laravel-dynamodb",
+    "support": {
+        "issues": "https://github.com/automoveisconfiaveis/package-laravel-dynamodb/issues",
+        "source": "https://github.com/automoveisconfiaveis/package-laravel-dynamodb"
+    },
     "authors": [
         {
-            "name": "AutomoveisConfiaveis",
-            "email": "contato@example.com"
+            "name": "Automóveis Confiáveis",
+            "email": "contato@autoconf.com.br"
         }
     ],
     "require": {
-      "php": "^8.2",
-      "illuminate/database": "^11.0|^12.0",
-      "illuminate/support": "^11.0|^12.0",
-      "aws/aws-sdk-php": "^3.322.9"
+        "php": "^8.4",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "aws/aws-sdk-php": "^3.322.9"
     },
     "require-dev": {
-      "orchestra/testbench": "^9.0|^10.0",
-      "phpunit/phpunit": "^10.5|^11.0",
-      "laravel/pint": "^1.24"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.24",
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^10.5|^11.0"
     },
     "autoload": {
         "psr-4": {
@@ -50,6 +55,20 @@
             ]
         }
     },
-    "minimum-stability": "dev",
+    "scripts": {
+        "lint": "pint --test",
+        "fix": "pint",
+        "analyse": "phpstan analyse",
+        "test": "phpunit",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

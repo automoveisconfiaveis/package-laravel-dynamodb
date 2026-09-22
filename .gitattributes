@@ -1,0 +1,20 @@
+# Mantém fora do pacote distribuído (composer dist / --prefer-dist) tudo que só
+# interessa ao desenvolvimento, deixando o tarball do release enxuto.
+/.github            export-ignore
+/docs               export-ignore
+/tests              export-ignore
+/.editorconfig      export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/CONTRIBUTING.md    export-ignore
+/UPGRADING.md       export-ignore
+/phpunit.xml        export-ignore
+/phpstan.neon       export-ignore
+/pint.json          export-ignore
+
+# Normaliza finais de linha.
+*.php   text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.neon  text eol=lf
+*.yml   text eol=lf

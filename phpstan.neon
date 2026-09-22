@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    # Após o primeiro run da análise, se houver achados pré-existentes que serão
+    # tratados aos poucos, gere um baseline e descomente a linha abaixo:
+    #   vendor/bin/phpstan analyse --generate-baseline
+    # - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
