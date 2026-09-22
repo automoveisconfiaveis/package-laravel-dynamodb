@@ -39,6 +39,13 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `Model::find()` (e qualquer `where` com coluna qualificada `tabela.coluna`, como
   as geradas por `getQualifiedKeyName()`) agora resolve a partition key corretamente e
   usa `GetItem`, em vez de degradar para `Scan` e retornar vazio.
+- `PutItem` passa a remover do Item os campos vazios (`null` **ou** string vazia `''`),
+  alinhando o `compileInsert` ao contrato que o `compileUpdate` já seguia. Antes o insert
+  removia apenas `null`, e uma string vazia gravada em atributo que é chave de índice
+  (GSI/LSI) fazia o DynamoDB devolver `ValidationException` ("The AttributeValue for a key
+  attribute cannot contain an empty string value"). O atributo passa a simplesmente não ser
+  gravado — o item não aparece nesses índices (índice esparso). `0`, `'0'` e `false`
+  continuam preservados, em ambos os caminhos.
 
 ## [0.2.6] - 2026-09-22
 

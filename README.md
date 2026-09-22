@@ -204,6 +204,31 @@ $cliente->save();
 $cliente->delete();
 ```
 
+### Campos vazios
+
+Em **insert e update**, campos com valor `null` ou string vazia (`''`) são removidos do
+payload antes de chegar ao DynamoDB — o atributo simplesmente não é gravado.
+
+```php
+Cliente::create([
+    'id'    => '123',
+    'nome'  => 'João Silva',
+    'email' => '',       // nao vai no PutItem: o item nao entra na GSI de email
+    'fone'  => null,     // idem
+]);
+```
+
+O motivo é que o DynamoDB rejeita string vazia em atributo que é chave de índice
+(GSI/LSI), devolvendo `ValidationException`. Omitir o atributo produz um **índice
+esparso**: o item existe na tabela, mas fora daquele índice — que é o comportamento
+desejado para campos opcionais.
+
+Valores "falsy" que **não** são vazios continuam sendo gravados normalmente: `0`, `'0'`
+e `false`. A checagem é estrita (`=== null || === ''`), não `empty()`.
+
+> Consequência no update: como `null` e `''` significam "não alterar", não é possível
+> **limpar** um atributo já gravado através de um update.
+
 ## 8. Exemplos avançados
 
 ### Resolução automática de índices

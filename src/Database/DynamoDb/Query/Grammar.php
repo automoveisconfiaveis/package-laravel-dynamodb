@@ -626,12 +626,14 @@ class Grammar extends BaseGrammar
     {
         $table = $this->getTableName($query);
 
-        // DynamoDB não aceita NULL em atributo de chave de índice (GSI/LSI).
-        // Omitir atributos nulos do Item antes do PutItem (o item simplesmente
-        // não aparece nesses índices), evitando ValidationException.
-        $stripNulls = static fn (array $item): array => array_filter(
+        // Campo vazio (null ou string vazia) é removido do Item antes do PutItem:
+        // o DynamoDB não aceita string vazia nem NULL em atributo que é chave de
+        // índice (GSI/LSI). O atributo simplesmente não é gravado e o item não
+        // aparece nesses índices (índice esparso), evitando ValidationException.
+        // Mesmo contrato do compileUpdate: 0, '0' e false são preservados.
+        $stripEmpty = static fn (array $item): array => array_filter(
             $item,
-            static fn ($value) => $value !== null
+            static fn ($value) => $value !== null && $value !== ''
         );
 
         // Se for array de arrays (batch insert), retorna todos
@@ -639,7 +641,7 @@ class Grammar extends BaseGrammar
             return array_map(fn ($value) => [
                 'params' => [
                     'TableName' => $table,
-                    'Item' => $stripNulls($value),
+                    'Item' => $stripEmpty($value),
                 ],
             ], $values);
         }
@@ -648,7 +650,7 @@ class Grammar extends BaseGrammar
         return [
             'params' => [
                 'TableName' => $table,
-                'Item' => $stripNulls($values),
+                'Item' => $stripEmpty($values),
             ],
         ];
     }
