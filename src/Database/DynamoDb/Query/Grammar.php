@@ -148,13 +148,34 @@ class Grammar extends BaseGrammar
      */
     protected function compileGetItem(BaseBuilder $query, array $params)
     {
-        $where = $query->wheres[0];
-        $key = $where['column'];
-        $value = $where['value'];
+        // Montar a Key a partir da partition/sort key REAIS da tabela, e não de
+        // $wheres[0]: a ordem das cláusulas where não é garantida, então usar a
+        // primeira condição pode produzir uma Key que não bate com o schema
+        // (ValidationException "The provided key element does not match the schema").
+        $resolver = $this->getIndexResolver($query);
+        $partitionKey = $resolver ? $resolver->getPartitionKey() : null;
+        $sortKey = $resolver ? $resolver->getSortKey() : null;
 
-        $params['Key'] = [
-            $key => $value,
-        ];
+        $key = [];
+        foreach ($query->wheres as $where) {
+            if (($where['type'] ?? null) !== 'Basic' || ($where['operator'] ?? null) !== '=') {
+                continue;
+            }
+            if ($partitionKey && $where['column'] === $partitionKey) {
+                $key[$partitionKey] = $where['value'];
+            } elseif ($sortKey && $where['column'] === $sortKey) {
+                $key[$sortKey] = $where['value'];
+            }
+        }
+
+        // Fallback defensivo: se não foi possível resolver a partition key,
+        // preserva o comportamento anterior (primeira condição como chave).
+        if (empty($key) && !empty($query->wheres)) {
+            $first = $query->wheres[0];
+            $key = [$first['column'] => $first['value']];
+        }
+
+        $params['Key'] = $key;
 
         // Adicionar ProjectionExpression se houver select específico
         $this->addProjectionExpression($query, $params);
