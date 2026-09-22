@@ -125,13 +125,23 @@ class Grammar extends BaseGrammar
         if ($resolver) {
             $indexMatch = $resolver->findBestIndex($query);
             if ($indexMatch) {
-                // Se encontrou índice, pode usar Query
+                // Primary key simples sem sort key: usar GetItem só se NÃO houver
+                // outras condições. Se houver (ex.: whereNull, where numa GSI),
+                // usar Query para aplicar FilterExpression — do contrário a Key
+                // sairia errada e/ou os filtros seriam ignorados (AUTOCONF-8-91B).
                 if ($indexMatch['index_type'] === 'primary' &&
                     count($indexMatch['key_conditions']) === 1 &&
                     !$resolver->getSortKey()) {
-                    return 'GetItem'; // Primary key simples sem sort key
+                    $keyColumns = array_column($indexMatch['key_conditions'], 'column');
+                    $remainingWheres = array_filter($wheres, function ($where) use ($keyColumns) {
+                        $col = $where['column'] ?? null;
+                        return $col === null || !in_array($col, $keyColumns);
+                    });
+                    if (empty($remainingWheres)) {
+                        return 'GetItem'; // Primary key simples sem sort key e sem filtros extras
+                    }
                 }
-                return 'Query'; // Usar Query com índice
+                return 'Query'; // Usar Query com índice (e FilterExpression quando houver outras condições)
             }
         }
 
@@ -561,6 +571,14 @@ class Grammar extends BaseGrammar
 
                     $expression[] = "{$nameKey} IN (" . implode(', ', $placeholders) . ')';
                     $attributeNames[$nameKey] = $where['column'];
+                    break;
+
+                case 'Null':
+                    // whereNull: no DynamoDB "nulo" pode ser atributo ausente
+                    // ou atributo gravado com o tipo NULL - os dois precisam casar.
+                    $expression[] = "(attribute_not_exists({$nameKey}) OR {$nameKey} = {$valueKey})";
+                    $attributeNames[$nameKey] = $where['column'];
+                    $attributeValues[$valueKey] = null;
                     break;
 
                 case 'NotNull':
