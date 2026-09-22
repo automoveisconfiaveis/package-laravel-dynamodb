@@ -30,10 +30,13 @@ O namespace PSR-4 mudou de `Joaquim\LaravelDynamoDb` para
 Uma busca-e-substituição por `Joaquim\LaravelDynamoDb` → `AutomoveisConfiaveis\LaravelDynamoDb`
 no seu projeto resolve.
 
-### 3. PHP 8.4
+### 3. PHP
 
-O piso mínimo passou a ser **PHP 8.4**. Projetos em PHP 8.2/8.3 devem permanecer na linha
-`0.2.x` até poderem atualizar o runtime.
+O piso mínimo continua sendo **PHP 8.2** — o mesmo da linha `0.2.x`. Nenhuma ação necessária.
+
+> A v1.0.0 declarou `^8.4` por engano: o código não usa nenhum recurso exclusivo de 8.3/8.4.
+> A v1.0.1 corrige o piso para `^8.2`. Se você ficou travado na `0.2.x` por causa disso,
+> pode atualizar direto para a `1.0.1`.
 
 ### 4. Configuração
 

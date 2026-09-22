@@ -42,13 +42,13 @@ cuida do específico do DynamoDB por baixo:
 
 | Dependência          | Versão              |
 | -------------------- | ------------------- |
-| PHP                  | `^8.4`              |
+| PHP                  | `^8.2`              |
 | Laravel (illuminate) | `^11.0` \| `^12.0`  |
 | AWS SDK for PHP      | `^3.322.9`          |
 
 ## 3. Versões de PHP suportadas
 
-`PHP 8.4`. Subir ou baixar o piso mínimo de PHP é tratado como **breaking change**
+`PHP 8.2`, `8.3` e `8.4`. Subir ou baixar o piso mínimo de PHP é tratado como **breaking change**
 (ver [Versionamento](#11-versionamento)).
 
 ## 4. Versões de Laravel suportadas
@@ -305,7 +305,7 @@ Histórico em [CHANGELOG.md](CHANGELOG.md).
 
 | Linha do pacote | PHP    | Laravel        |
 | --------------- | ------ | -------------- |
-| `1.x`           | `^8.4` | `11.x`, `12.x` |
+| `1.x`           | `^8.2` | `11.x`, `12.x` |
 
 ## 12. Upgrade entre versões
 

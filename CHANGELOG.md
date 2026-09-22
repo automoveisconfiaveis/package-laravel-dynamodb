@@ -20,7 +20,8 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Workflow de CI no GitHub Actions.
 
 ### Changed
-- **BREAKING**: piso mínimo de PHP passa a ser `^8.4`.
+- Piso mínimo de PHP mantido em `^8.2` (a v1.0.0 havia subido para `^8.4` sem que o
+  código exigisse recursos de 8.3/8.4; revertido na 1.0.1).
 - Versão passa a ser controlada exclusivamente por tag git; campo `version` removido do
   `composer.json`.
 - Vendor/namespace renomeados de `joaquim` para `automoveisconfiaveis`
