@@ -2,35 +2,29 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
-use Illuminate\Database\Query\Builder as BaseBuilder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
+use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Pagination\Paginator;
 
 class Builder extends BaseBuilder
 {
     /**
      * Model instance associated with this query (for index resolution).
-     *
-     * @var DynamoDbModel|null
      */
     protected ?DynamoDbModel $model = null;
 
     /**
      * Set the model instance.
-     *
-     * @param DynamoDbModel $model
-     * @return self
      */
     public function setModel(DynamoDbModel $model): self
     {
         $this->model = $model;
+
         return $this;
     }
 
     /**
      * Get the model instance.
-     *
-     * @return DynamoDbModel|null
      */
     public function getModel(): ?DynamoDbModel
     {
@@ -41,10 +35,10 @@ class Builder extends BaseBuilder
      * Paginate the given query using cursor-based pagination.
      * DynamoDB não suporta OFFSET, então usamos LastEvaluatedKey (cursor).
      *
-     * @param int $perPage
-     * @param array $columns
-     * @param string $cursorName
-     * @param string|null $cursor
+     * @param  int  $perPage
+     * @param  array  $columns
+     * @param  string  $cursorName
+     * @param  string|null  $cursor
      * @return \Illuminate\Contracts\Pagination\Paginator
      */
     public function simplePaginate($perPage = 15, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
@@ -65,8 +59,8 @@ class Builder extends BaseBuilder
 
         // Compilar a query
         $compiled = $this->grammar->compileSelect($this);
-        
-        if (!isset($compiled['operation']) || !isset($compiled['params'])) {
+
+        if (! isset($compiled['operation']) || ! isset($compiled['params'])) {
             // Fallback para array vazio se compilação falhar
             return new Paginator([], $perPage, null, [
                 'path' => Paginator::resolveCurrentPath(),
@@ -195,7 +189,7 @@ class Builder extends BaseBuilder
 
             // Armazenar next_cursor como propriedade custom do paginator
             $paginator->hasMorePagesWhen($hasMorePages);
-            
+
             // Adicionar next_cursor nos metadados do paginator
             if ($nextCursor) {
                 $paginator->appends([$cursorName => $nextCursor]);
@@ -223,7 +217,7 @@ class Builder extends BaseBuilder
      * Retorna os nomes dos atributos que compõem a chave para ExclusiveStartKey
      * (índice ou tabela), para que o cursor não envie atributos extras ou null.
      *
-     * @param array $params Params compilados (TableName, IndexName, etc.)
+     * @param  array  $params  Params compilados (TableName, IndexName, etc.)
      * @return array<string>|null
      */
     protected function getKeyAttributeNamesForCursor(array $params): ?array
@@ -246,11 +240,13 @@ class Builder extends BaseBuilder
                     $keys[] = $indexConfig['sort_key'];
                 }
                 $keys[] = $tablePartitionKey;
+
                 return array_values(array_unique($keys));
             }
         }
 
         $keys = array_filter([$tablePartitionKey, $tableSortKey]);
+
         return empty($keys) ? null : array_values($keys);
     }
 
@@ -258,9 +254,8 @@ class Builder extends BaseBuilder
      * Filtra um item/array para conter apenas os atributos da chave do índice/tabela
      * e remove valores null (DynamoDB não aceita null em chave).
      *
-     * @param array $item Item completo ou decoded cursor
-     * @param array $params Params compilados da query
-     * @return array
+     * @param  array  $item  Item completo ou decoded cursor
+     * @param  array  $params  Params compilados da query
      */
     protected function filterToKeyAttributesForCursor(array $item, array $params): array
     {
@@ -279,4 +274,3 @@ class Builder extends BaseBuilder
         return $filtered;
     }
 }
-

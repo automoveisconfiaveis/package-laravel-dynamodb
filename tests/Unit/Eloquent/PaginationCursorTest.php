@@ -2,12 +2,12 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Tests\Unit\Eloquent;
 
-use Aws\DynamoDb\DynamoDbClient;
-use Aws\Result;
-use Illuminate\Database\Query\Builder as BaseQueryBuilder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder as DynamoDbEloquentBuilder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\Result;
+use Illuminate\Database\Query\Builder as BaseQueryBuilder;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 

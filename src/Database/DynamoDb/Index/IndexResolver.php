@@ -2,8 +2,8 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Index;
 
-use Illuminate\Database\Query\Builder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
 
 /**
  * Resolve qual índice usar para uma query baseado nas condições where.
@@ -12,43 +12,31 @@ class IndexResolver
 {
     /**
      * Model instance para obter configuração de índices.
-     *
-     * @var Model|null
      */
     protected ?Model $model = null;
 
     /**
      * Partition Key da tabela.
-     *
-     * @var string|null
      */
     protected ?string $partitionKey = null;
 
     /**
      * Sort Key da tabela.
-     *
-     * @var string|null
      */
     protected ?string $sortKey = null;
 
     /**
      * GSI indexes configurados.
-     *
-     * @var array
      */
     protected array $gsiIndexes = [];
 
     /**
      * LSI indexes configurados.
-     *
-     * @var array
      */
     protected array $lsiIndexes = [];
 
     /**
      * Create a new IndexResolver instance.
-     *
-     * @param Model|null $model
      */
     public function __construct(?Model $model = null)
     {
@@ -59,9 +47,6 @@ class IndexResolver
 
     /**
      * Set the model and load its index configuration.
-     *
-     * @param Model $model
-     * @return self
      */
     public function setModel(Model $model): self
     {
@@ -77,12 +62,11 @@ class IndexResolver
     /**
      * Find the best index match for a query.
      *
-     * @param Builder $query
      * @return array|null ['index_name' => string, 'index_type' => 'gsi'|'lsi'|'primary', 'key_conditions' => array, 'filter_conditions' => array]
      */
     public function findBestIndex(Builder $query): ?array
     {
-        if (!$this->model) {
+        if (! $this->model) {
             return null;
         }
 
@@ -118,9 +102,6 @@ class IndexResolver
 
     /**
      * Check if query can use Primary Key (GetItem or Query).
-     *
-     * @param array $wheres
-     * @return bool
      */
     protected function canUsePrimaryKey(array $wheres): bool
     {
@@ -140,7 +121,7 @@ class IndexResolver
         }
 
         // Se não tem Sort Key, pode usar apenas Partition Key (Query)
-        if (!$this->sortKey) {
+        if (! $this->sortKey) {
             return $hasPartitionKey;
         }
 
@@ -150,13 +131,10 @@ class IndexResolver
 
     /**
      * Find matching LSI index.
-     *
-     * @param array $wheres
-     * @return array|null
      */
     protected function findLsiMatch(array $wheres): ?array
     {
-        if (empty($this->lsiIndexes) || !$this->partitionKey) {
+        if (empty($this->lsiIndexes) || ! $this->partitionKey) {
             return null;
         }
 
@@ -171,7 +149,7 @@ class IndexResolver
             }
         }
 
-        if (!$hasPartitionKey) {
+        if (! $hasPartitionKey) {
             return null;
         }
 
@@ -189,9 +167,6 @@ class IndexResolver
     /**
      * Find matching GSI index.
      * Prioriza índices que tenham Partition Key presente nas condições WHERE.
-     *
-     * @param array $wheres
-     * @return array|null
      */
     protected function findGsiMatch(array $wheres): ?array
     {
@@ -210,7 +185,7 @@ class IndexResolver
                 // Priority 2: Partition Key (Sort Key não existe ou não está nas condições)
                 // Priority 1: Apenas Partition Key (mas índice tem Sort Key que não está nas condições)
                 // Priority 0: Sem Partition Key
-                
+
                 if ($match['has_partition_key'] && $match['has_sort_key']) {
                     $priority = 3; // Melhor match: PK + SK
                 } elseif ($match['has_partition_key'] && empty($match['sort_key'])) {
@@ -220,7 +195,7 @@ class IndexResolver
                 } else {
                     $priority = 0;
                 }
-                
+
                 $matches[] = ['match' => $match, 'priority' => $priority];
             }
         }
@@ -230,7 +205,7 @@ class IndexResolver
         }
 
         // Ordenar por prioridade (prioridade maior primeiro)
-        usort($matches, fn($a, $b) => $b['priority'] <=> $a['priority']);
+        usort($matches, fn ($a, $b) => $b['priority'] <=> $a['priority']);
 
         // Retornar o melhor match
         return $matches[0]['match'];
@@ -238,19 +213,13 @@ class IndexResolver
 
     /**
      * Check if where conditions match an index.
-     *
-     * @param array $wheres
-     * @param array $indexConfig
-     * @param string $indexName
-     * @param string $indexType
-     * @return array|null
      */
     protected function checkIndexMatch(array $wheres, array $indexConfig, string $indexName, string $indexType): ?array
     {
         $indexPartitionKey = $indexConfig['partition_key'] ?? null;
         $indexSortKey = $indexConfig['sort_key'] ?? null;
 
-        if (!$indexPartitionKey) {
+        if (! $indexPartitionKey) {
             return null;
         }
 
@@ -263,12 +232,14 @@ class IndexResolver
             // Condições Null/NotNull vão para FilterExpression (não são KeyCondition)
             if ($where['type'] === 'Null' || $where['type'] === 'NotNull') {
                 $filterConditions[] = $where;
+
                 continue;
             }
 
             // whereIn (In) vai para FilterExpression
             if ($where['type'] === 'In') {
                 $filterConditions[] = $where;
+
                 continue;
             }
 
@@ -308,7 +279,7 @@ class IndexResolver
         }
 
         // Precisa ter pelo menos Partition Key
-        if (!$hasPartitionKey) {
+        if (! $hasPartitionKey) {
             return null;
         }
 
@@ -325,10 +296,6 @@ class IndexResolver
 
     /**
      * Extract key conditions from where clauses.
-     *
-     * @param array $wheres
-     * @param array $keyColumns
-     * @return array
      */
     protected function extractKeyConditions(array $wheres, array $keyColumns): array
     {
@@ -349,9 +316,6 @@ class IndexResolver
 
     /**
      * Check if a column is the partition key.
-     *
-     * @param string $column
-     * @return bool
      */
     public function isPartitionKey(string $column): bool
     {
@@ -360,9 +324,6 @@ class IndexResolver
 
     /**
      * Check if a column is the sort key.
-     *
-     * @param string $column
-     * @return bool
      */
     public function isSortKey(string $column): bool
     {
@@ -371,8 +332,6 @@ class IndexResolver
 
     /**
      * Get partition key.
-     *
-     * @return string|null
      */
     public function getPartitionKey(): ?string
     {
@@ -381,8 +340,6 @@ class IndexResolver
 
     /**
      * Get sort key.
-     *
-     * @return string|null
      */
     public function getSortKey(): ?string
     {

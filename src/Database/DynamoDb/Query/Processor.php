@@ -2,16 +2,16 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
-use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 
 class Processor extends BaseProcessor
 {
     /**
      * Process the results of a "select" query.
      *
-     * @param \Illuminate\Database\Query\Builder $query
-     * @param array $results
+     * @param  Builder  $query
+     * @param  array  $results
      * @return array
      */
     public function processSelect($query, $results)
@@ -28,7 +28,6 @@ class Processor extends BaseProcessor
     /**
      * Process the results of an aggregate query.
      *
-     * @param  \Illuminate\Database\Query\Builder  $query
      * @param  array  $results
      * @return array
      */
@@ -53,6 +52,4 @@ class Processor extends BaseProcessor
         // Contar resultados para count()
         return [(object) ['aggregate' => count($results)]];
     }
-
-
 }

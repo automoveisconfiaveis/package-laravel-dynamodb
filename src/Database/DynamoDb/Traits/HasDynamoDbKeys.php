@@ -12,6 +12,7 @@ trait HasDynamoDbKeys
     public function getPartitionKeyValue()
     {
         $key = $this->getPartitionKey();
+
         return $this->getAttribute($key);
     }
 
@@ -26,6 +27,7 @@ trait HasDynamoDbKeys
         if ($key === null) {
             return null;
         }
+
         return $this->getAttribute($key);
     }
 
@@ -56,4 +58,3 @@ trait HasDynamoDbKeys
         return $this->getPartitionKeyValue();
     }
 }
-

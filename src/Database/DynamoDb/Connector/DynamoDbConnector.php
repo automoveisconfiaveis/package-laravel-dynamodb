@@ -2,16 +2,13 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connector;
 
-use Aws\DynamoDb\DynamoDbClient;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
+use Aws\DynamoDb\DynamoDbClient;
 
 class DynamoDbConnector
 {
     /**
      * Estabelecer conexão com DynamoDB.
-     *
-     * @param array $config
-     * @return DynamoDbConnection
      */
     public function connect(array $config): DynamoDbConnection
     {
@@ -22,9 +19,6 @@ class DynamoDbConnector
 
     /**
      * Criar instância do DynamoDbClient.
-     *
-     * @param array $config
-     * @return DynamoDbClient
      */
     protected function createDynamoDbClient(array $config): DynamoDbClient
     {
@@ -34,7 +28,7 @@ class DynamoDbConnector
         ];
 
         // Endpoint para DynamoDB Local (se fornecido)
-        if (!empty($config['endpoint'])) {
+        if (! empty($config['endpoint'])) {
             $clientConfig['endpoint'] = $config['endpoint'];
 
             // DynamoDB Local: sempre usar credenciais válidas
@@ -48,7 +42,7 @@ class DynamoDbConnector
             $clientConfig['http'] = [
                 'verify' => false,
             ];
-        } elseif (!empty($config['key']) && !empty($config['secret'])) {
+        } elseif (! empty($config['key']) && ! empty($config['secret'])) {
             // Credenciais AWS (produção)
             $clientConfig['credentials'] = [
                 'key' => $config['key'],
@@ -59,4 +53,3 @@ class DynamoDbConnector
         return new DynamoDbClient($clientConfig);
     }
 }
-

@@ -2,8 +2,8 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb\Tests\Unit\Query;
 
-use Illuminate\Database\Query\Builder;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Grammar;
+use Illuminate\Database\Query\Builder;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
