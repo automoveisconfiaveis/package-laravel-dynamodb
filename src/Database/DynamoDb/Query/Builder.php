@@ -165,17 +165,20 @@ class Builder extends BaseBuilder
                     $result['Items'] ?? []
                 );
 
+                // Lemos perPage+1 (sentinela) só para saber se há próxima página.
                 $hasMorePages = count($items) > $perPage;
-                if ($hasMorePages && ! empty($result['LastEvaluatedKey'])) {
-                    $nextCursor = base64_encode(json_encode($marshaler->unmarshalItem($result['LastEvaluatedKey'])));
-                } elseif ($hasMorePages && isset($items[$perPage - 1])) {
-                    // Primeira página: às vezes o DynamoDB não devolve LastEvaluatedKey.
-                    // ExclusiveStartKey = "começar depois deste item" → usar o último item que mostramos.
-                    $keyOnly = $this->filterToKeyAttributesForCursor((array) $items[$perPage - 1], $params);
-                    $nextCursor = ! empty($keyOnly) ? base64_encode(json_encode($keyOnly)) : null;
-                }
                 if ($hasMorePages) {
+                    // Descarta o item sentinela: a página mostra exatamente perPage itens.
                     array_pop($items);
+
+                    // O cursor DEVE ser a chave do último item EXIBIDO (ExclusiveStartKey =
+                    // "começar depois deste"). Usar o LastEvaluatedKey do DynamoDB apontaria
+                    // para o item sentinela descartado, pulando-o na página seguinte.
+                    $lastShown = end($items) ?: null;
+                    if ($lastShown !== null) {
+                        $keyOnly = $this->filterToKeyAttributesForCursor((array) $lastShown, $params);
+                        $nextCursor = ! empty($keyOnly) ? base64_encode(json_encode($keyOnly)) : null;
+                    }
                 }
             }
 

@@ -94,6 +94,22 @@ class Model extends BaseModel
     }
 
     /**
+     * Get a new Eloquent query builder for the model.
+     *
+     * Sem este override, Model::simplePaginate() cai no Eloquent\Builder base do
+     * Laravel, que pagina por OFFSET (número de página) — ignorado pela Grammar
+     * do DynamoDB — fazendo toda página repetir a primeira. O Builder do pacote
+     * pagina por cursor (LastEvaluatedKey), que é o comportamento correto.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     * @return \Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder
+     */
+    public function newEloquentBuilder($query)
+    {
+        return new Builder($query);
+    }
+
+    /**
      * Perform a model insert operation.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query

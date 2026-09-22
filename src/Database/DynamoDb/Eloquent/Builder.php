@@ -26,8 +26,16 @@ class Builder extends BaseBuilder
             $columns = ['*'];
         }
 
-        // Delegar diretamente para o Query Builder customizado do DynamoDB
-        // que tem a implementação correta de paginação por cursor
-        return $this->query->simplePaginate($perPage, $columns, $cursorName, $cursor);
+        // Delegar ao Query Builder customizado (paginação por cursor correta).
+        $paginator = $this->query->simplePaginate($perPage, $columns, $cursorName, $cursor);
+
+        // O Query Builder devolve stdClass; hidratamos em instâncias do model para
+        // preservar accessors/casts/relations que os consumidores esperam (o Eloquent
+        // base hidratava). O cursor e o hasMorePages já calculados são mantidos.
+        $paginator->setCollection(
+            $this->hydrate(array_map(static fn ($item) => (array) $item, $paginator->items()))
+        );
+
+        return $paginator;
     }
 }
