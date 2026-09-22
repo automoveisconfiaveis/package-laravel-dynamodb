@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "joaquim/laravel-dynamodb",
+    "name": "automoveisconfiaveis/laravel-dynamodb",
     "version": "0.2.7",
     "description": "DynamoDB driver for Laravel with automatic index resolution and Eloquent support",
     "keywords": [
@@ -18,8 +18,8 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Joaquim",
-            "email": "joaquim@example.com"
+            "name": "AutomoveisConfiaveis",
+            "email": "contato@example.com"
         }
     ],
     "require": {
@@ -35,18 +35,18 @@
     },
     "autoload": {
         "psr-4": {
-            "Joaquim\\LaravelDynamoDb\\": "src/"
+            "AutomoveisConfiaveis\\LaravelDynamoDb\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Joaquim\\LaravelDynamoDb\\Tests\\": "tests/"
+            "AutomoveisConfiaveis\\LaravelDynamoDb\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Joaquim\\LaravelDynamoDb\\DynamoDbServiceProvider"
+                "AutomoveisConfiaveis\\LaravelDynamoDb\\DynamoDbServiceProvider"
             ]
         }
     },

@@ -53,7 +53,7 @@ Se quiser migrar para o novo nome:
 
 1. **Publicar nova configuração:**
    ```bash
-   php artisan vendor:publish --provider="Joaquim\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
+   php artisan vendor:publish --provider="AutomoveisConfiaveis\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
    ```
 
 2. **Copiar configurações do arquivo antigo:**
@@ -72,7 +72,7 @@ Se quiser migrar para o novo nome:
 
 ### Instalação via Symlink (Desenvolvimento)
 
-Quando você instala o package localmente via `composer require joaquim/laravel-dynamodb:@dev`, o Composer cria um **symlink** em `vendor/joaquim/laravel-dynamodb/` que aponta para `package-laravel-dynamodb/`.
+Quando você instala o package localmente via `composer require automoveisconfiaveis/laravel-dynamodb:@dev`, o Composer cria um **symlink** em `vendor/automoveisconfiaveis/laravel-dynamodb/` que aponta para `package-laravel-dynamodb/`.
 
 ### ⚠️ Impacto nos Testes
 

@@ -13,15 +13,15 @@ O package está completo em `package-laravel-dynamodb/` e pronto para ser instal
 O projeto Laravel já está configurado com path repository. Execute:
 
 ```bash
-composer require joaquim/laravel-dynamodb:@dev
+composer require automoveisconfiaveis/laravel-dynamodb:@dev
 ```
 
-Isso cria um symlink em `vendor/joaquim/laravel-dynamodb/` apontando para `package-laravel-dynamodb/`.
+Isso cria um symlink em `vendor/automoveisconfiaveis/laravel-dynamodb/` apontando para `package-laravel-dynamodb/`.
 
 ### 2. Publicar Configuração
 
 ```bash
-php artisan vendor:publish --provider="Joaquim\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
+php artisan vendor:publish --provider="AutomoveisConfiaveis\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
 ```
 
 Isso cria o arquivo `config/database-dynamodb.php` com as conexões pré-configuradas.
@@ -69,14 +69,14 @@ package-laravel-dynamodb/
 O package será disponibilizado em:
 
 ```
-vendor/joaquim/laravel-dynamodb/
+vendor/automoveisconfiaveis/laravel-dynamodb/
 ```
 
 E você pode usar:
 
 ```php
-use Joaquim\LaravelDynamoDb\Eloquent\Model;
-use Joaquim\LaravelDynamoDb\Traits\HasDynamoDbKeys;
+use AutomoveisConfiaveis\LaravelDynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Traits\HasDynamoDbKeys;
 ```
 
 ---
@@ -86,7 +86,7 @@ use Joaquim\LaravelDynamoDb\Traits\HasDynamoDbKeys;
 1. Criar repositório Git
 2. Fazer commit
 3. Submeter no Packagist.org
-4. Instalar: `composer require joaquim/laravel-dynamodb`
+4. Instalar: `composer require automoveisconfiaveis/laravel-dynamodb`
 
 ---
 

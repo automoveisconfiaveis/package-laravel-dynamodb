@@ -1,9 +1,9 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Query;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
 use Illuminate\Database\Query\Builder as BaseBuilder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
 use Illuminate\Pagination\Paginator;
 
 class Builder extends BaseBuilder

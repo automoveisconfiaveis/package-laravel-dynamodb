@@ -1,9 +1,9 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Index;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Index;
 
 use Illuminate\Database\Query\Builder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
 
 /**
  * Resolve qual índice usar para uma query baseado nas condições where.

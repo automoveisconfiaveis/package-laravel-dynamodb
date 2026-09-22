@@ -1,12 +1,12 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Connection;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection;
 
 use Illuminate\Database\Connection as BaseConnection;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Query\Grammar as DynamoDbGrammar;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Query\Processor as DynamoDbProcessor;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Grammar as DynamoDbGrammar;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Processor as DynamoDbProcessor;
 
 class DynamoDbConnection extends BaseConnection
 {
@@ -735,7 +735,7 @@ class DynamoDbConnection extends BaseConnection
      */
     public function query()
     {
-        return new \Joaquim\LaravelDynamoDb\Database\DynamoDb\Query\Builder($this);
+        return new \AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Builder($this);
     }
 
     /**

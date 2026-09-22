@@ -1,13 +1,13 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Tests\Unit\Eloquent;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Tests\Unit\Eloquent;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Result;
 use Illuminate\Database\Query\Builder as BaseQueryBuilder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder as DynamoDbEloquentBuilder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder as DynamoDbEloquentBuilder;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 

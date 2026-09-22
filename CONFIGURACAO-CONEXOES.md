@@ -11,7 +11,7 @@ Este package usa `config/database-dynamodb.php` (ou `config/dynamodb.php` para c
 ### 1. Publicar o arquivo de configuração
 
 ```bash
-php artisan vendor:publish --provider="Joaquim\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
+php artisan vendor:publish --provider="AutomoveisConfiaveis\LaravelDynamoDb\DynamoDbServiceProvider" --tag="dynamodb-config"
 ```
 
 Isso cria o arquivo `config/database-dynamodb.php` com as conexões padrão.
@@ -71,7 +71,7 @@ As conexões definidas em `config/dynamodb.php` são automaticamente disponibili
 #### Em Models:
 
 ```php
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
 
 class Cliente extends Model
 {

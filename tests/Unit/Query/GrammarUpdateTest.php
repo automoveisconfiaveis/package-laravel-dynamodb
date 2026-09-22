@@ -1,9 +1,9 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Tests\Unit\Query;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Tests\Unit\Query;
 
 use Illuminate\Database\Query\Builder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Query\Grammar;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Grammar;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Traits;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Traits;
 
 trait HasDynamoDbKeys
 {

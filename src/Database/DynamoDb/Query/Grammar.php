@@ -1,11 +1,11 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Query;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Index\IndexResolver;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model as DynamoDbModel;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Index\IndexResolver;
 
 class Grammar extends BaseGrammar
 {

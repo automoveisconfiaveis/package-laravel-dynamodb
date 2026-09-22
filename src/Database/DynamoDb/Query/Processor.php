@@ -1,6 +1,6 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Query;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query;
 
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Database\Query\Builder;

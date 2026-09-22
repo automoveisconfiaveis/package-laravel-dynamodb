@@ -1,11 +1,11 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb;
+namespace AutomoveisConfiaveis\LaravelDynamoDb;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\Connection;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Connector\DynamoDbConnector;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connector\DynamoDbConnector;
 
 class DynamoDbServiceProvider extends ServiceProvider
 {

@@ -1,10 +1,10 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Query\Builder as DynamoDbBuilder;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Query\Builder as DynamoDbBuilder;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
 
 class Model extends BaseModel
 {
@@ -102,7 +102,7 @@ class Model extends BaseModel
      * pagina por cursor (LastEvaluatedKey), que é o comportamento correto.
      *
      * @param  \Illuminate\Database\Query\Builder  $query
-     * @return \Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder
+     * @return \AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Builder
      */
     public function newEloquentBuilder($query)
     {

@@ -19,7 +19,7 @@ Um driver completo e otimizado para Amazon DynamoDB no Laravel, com suporte a El
 ### Via Composer
 
 ```bash
-composer require joaquim/laravel-dynamodb
+composer require automoveisconfiaveis/laravel-dynamodb
 ```
 
 ### Configuração
@@ -91,7 +91,7 @@ AWS_SECRET_ACCESS_KEY=your-secret
 
 namespace App\Models;
 
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
 
 class Cliente extends Model
 {
@@ -301,7 +301,7 @@ Com `APP_DEBUG=true`, o pacote registra logs úteis:
 
 namespace App\Models;
 
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent\Model;
 
 class Produto extends Model
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Eloquent;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseBuilder;
 

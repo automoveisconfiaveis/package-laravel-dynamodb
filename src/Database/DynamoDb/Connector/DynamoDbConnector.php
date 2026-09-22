@@ -1,9 +1,9 @@
 <?php
 
-namespace Joaquim\LaravelDynamoDb\Database\DynamoDb\Connector;
+namespace AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connector;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Joaquim\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
+use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connection\DynamoDbConnection;
 
 class DynamoDbConnector
 {
