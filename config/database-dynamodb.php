@@ -13,7 +13,7 @@ return [
 
     'default' => env('DYNAMODB_CONNECTION', 'aws'),
 
-    'on_connection' =>  env('DYNAMODB_CONNECTION', 'aws'),
+    'on_connection' => env('DYNAMODB_CONNECTION', 'aws'),
 
     /*
     |--------------------------------------------------------------------------
@@ -48,4 +48,3 @@ return [
         ],
     ],
 ];
-

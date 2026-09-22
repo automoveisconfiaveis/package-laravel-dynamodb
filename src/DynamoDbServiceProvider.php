@@ -2,10 +2,10 @@
 
 namespace AutomoveisConfiaveis\LaravelDynamoDb;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Database\Connection;
 use AutomoveisConfiaveis\LaravelDynamoDb\Database\DynamoDb\Connector\DynamoDbConnector;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\ServiceProvider;
 
 class DynamoDbServiceProvider extends ServiceProvider
 {
@@ -16,21 +16,13 @@ class DynamoDbServiceProvider extends ServiceProvider
     {
         // Registrar connector no ConnectionFactory
         Connection::resolverFor('dynamodb', function ($connection, $database, $prefix, $config) {
-            $connector = new DynamoDbConnector();
+            $connector = new DynamoDbConnector;
+
             return $connector->connect($config);
         });
 
-        // Registrar configuração (usar novo nome, mas manter compatibilidade)
-        $configFile = __DIR__ . '/../config/database-dynamodb.php';
-        if (file_exists($configFile)) {
-            $this->mergeConfigFrom($configFile, 'dynamodb');
-        } else {
-            // Fallback para nome antigo (compatibilidade retroativa)
-            $this->mergeConfigFrom(
-                __DIR__ . '/../config/dynamodb.php',
-                'dynamodb'
-            );
-        }
+        // Registrar configuração padrão do pacote sob a chave 'dynamodb'.
+        $this->mergeConfigFrom(__DIR__.'/../config/database-dynamodb.php', 'dynamodb');
     }
 
     /**
@@ -40,7 +32,7 @@ class DynamoDbServiceProvider extends ServiceProvider
     {
         // Publicar arquivo de configuração (novo nome)
         $this->publishes([
-            __DIR__ . '/../config/database-dynamodb.php' => config_path('database-dynamodb.php'),
+            __DIR__.'/../config/database-dynamodb.php' => config_path('database-dynamodb.php'),
         ], 'dynamodb-config');
 
         // Mesclar conexões do config/dynamodb.php para config/database.php
@@ -63,15 +55,9 @@ class DynamoDbServiceProvider extends ServiceProvider
         elseif (file_exists(config_path('dynamodb.php'))) {
             $dynamoDbConfig = require config_path('dynamodb.php');
         }
-        // Se não existe nenhum, usar a config padrão do package
+        // Se o app não publicou nenhum config, usar a config padrão do pacote.
         else {
-            $defaultConfig = __DIR__ . '/../config/database-dynamodb.php';
-            if (file_exists($defaultConfig)) {
-                $dynamoDbConfig = require $defaultConfig;
-            } else {
-                // Último fallback para nome antigo no package
-                $dynamoDbConfig = require __DIR__ . '/../config/dynamodb.php';
-            }
+            $dynamoDbConfig = require __DIR__.'/../config/database-dynamodb.php';
         }
 
         // Se tem conexões definidas, mesclar com database.php
@@ -86,18 +72,18 @@ class DynamoDbServiceProvider extends ServiceProvider
             $defaultConnection = $dynamoDbConfig['default'] ?? 'local';
 
             // Se o default não existir, usar 'local' como fallback
-            if (!isset($dynamoDbConfig['connections'][$defaultConnection])) {
+            if (! isset($dynamoDbConfig['connections'][$defaultConnection])) {
                 $defaultConnection = 'local';
             }
 
             // Se ainda não existe, usar a primeira conexão disponível
-            if (!isset($dynamoDbConfig['connections'][$defaultConnection]) && !empty($dynamoDbConfig['connections'])) {
+            if (! isset($dynamoDbConfig['connections'][$defaultConnection]) && ! empty($dynamoDbConfig['connections'])) {
                 $defaultConnection = array_key_first($dynamoDbConfig['connections']);
             }
 
             if (isset($dynamoDbConfig['connections'][$defaultConnection])) {
                 // Copiar a configuração da conexão padrão para 'dynamodb'
-                Config::set("database.connections.dynamodb", $dynamoDbConfig['connections'][$defaultConnection]);
+                Config::set('database.connections.dynamodb', $dynamoDbConfig['connections'][$defaultConnection]);
             }
         }
     }
