@@ -46,6 +46,10 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   attribute cannot contain an empty string value"). O atributo passa a simplesmente não ser
   gravado — o item não aparece nesses índices (índice esparso). `0`, `'0'` e `false`
   continuam preservados, em ambos os caminhos.
+- `get()` (Query/Scan sem `Limit`) agora percorre todas as páginas até o DynamoDB não
+  devolver mais `LastEvaluatedKey`. Antes a paginação automática parava ao acumular 1000
+  itens; como a 1ª página (1MB) pode trazer milhares de itens sozinha, as páginas seguintes
+  eram descartadas sem aviso. Com `Limit`, continua parando ao atingir o limite.
 
 ## [0.2.6] - 2026-09-22
 

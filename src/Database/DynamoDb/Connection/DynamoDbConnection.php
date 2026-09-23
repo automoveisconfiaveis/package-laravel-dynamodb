@@ -304,11 +304,8 @@ class DynamoDbConnection extends BaseConnection
                             $allItems = array_merge($allItems, $nextItems);
                             $currentKey = $nextResult['LastEvaluatedKey'] ?? null;
 
-                            // Limitar para evitar loops infinitos (máximo 10 páginas automáticas)
-                            if (count($allItems) >= ($limit ?? 1000) || ! $currentKey) {
-                                break;
-                            }
-                        } while ($currentKey && count($allItems) < ($limit ?? 1000));
+                            // Sem Limit (get()), segue até o DynamoDB não devolver mais LastEvaluatedKey.
+                        } while ($currentKey && (! $hasLimit || count($allItems) < $limit));
 
                         $items = $allItems;
                     }
@@ -379,11 +376,8 @@ class DynamoDbConnection extends BaseConnection
                         $allItems = array_merge($allItems, $nextItems);
                         $currentKey = $nextResult['LastEvaluatedKey'] ?? null;
 
-                        // Limitar para evitar loops infinitos
-                        if (count($allItems) >= ($limit ?? 1000) || ! $currentKey) {
-                            break;
-                        }
-                    } while ($currentKey && count($allItems) < ($limit ?? 1000));
+                        // Sem Limit (get()), segue até o DynamoDB não devolver mais LastEvaluatedKey.
+                    } while ($currentKey && (! $hasLimit || count($allItems) < $limit));
 
                     $items = $allItems;
                 }
