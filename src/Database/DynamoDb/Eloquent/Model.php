@@ -148,6 +148,11 @@ class Model extends BaseModel
             $query->getQuery()->getGrammar()->compileInsert($query->getQuery(), $attributes)
         );
 
+        // Como no performInsert do Eloquent base: sem exists=true, um update() no mesmo
+        // objeto logo após o create() retornava false sem gravar nada.
+        $this->exists = true;
+        $this->wasRecentlyCreated = true;
+
         // Marcar como sincronizado
         $this->syncOriginal();
 

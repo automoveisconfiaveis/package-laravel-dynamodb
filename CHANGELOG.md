@@ -36,6 +36,10 @@ e o projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Documentos internos movidos para `docs/`.
 
 ### Fixed
+- `performInsert` passa a marcar o model como `exists = true` e `wasRecentlyCreated = true`,
+  como o Eloquent base. Antes, um `update()` no mesmo objeto logo após o `create()`/`save()`
+  retornava `false` sem chamar `UpdateItem` (ex.: `message_id`/`message_status` do envio
+  ao Instagram nunca eram gravados, e o echo virava mensagem duplicada).
 - `Model::find()` (e qualquer `where` com coluna qualificada `tabela.coluna`, como
   as geradas por `getQualifiedKeyName()`) agora resolve a partition key corretamente e
   usa `GetItem`, em vez de degradar para `Scan` e retornar vazio.
