@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   ci:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
 
     strategy:
